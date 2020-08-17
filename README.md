@@ -1,55 +1,71 @@
-## 1. 编程基础
+# 一、编程基础
 
-### 1.1 网络开发模型
+## 1. 网络开发模型
 
 B/S模型（browser / server）：浏览器与服务器模型。对服务器要求高，计算均在服务端进行，但移植性好，不依赖具体平台
 
 C/S模型（client / server ）：客户端与服务器模型
 
-### 1.2 TCP 传输控制协议
+## 2. TCP/IP协议栈
+
+<img src="https://tse2-mm.cn.bing.net/th/id/OIP.VsYdx31XsYvx8UkfjgLWUwHaEj?pid=Api&amp;rs=1" style="zoom:120%;" />
+
+
+
+TCP和UDP属于传输层协议，IP为网络层协议
+
+**TCP，传输控制协议**
 
 特点：
 
-- 面向连接，类似于打电话，需要先建立连接
-- 稳定可靠，保证数据的安全传输
+- 面向连接，类似于打电话的过程，双方需要先建立连接，然后才能进行通信
 
-### 1.3 UDP 用户数据报协议
+- 具有超时重传、拥塞控制等机制，可以保证数据的可靠传输
+
+  
+
+**UDP 用户数据报协议**
 
 特点：
 
-- 面向无连接，类似于写信，不需要先建立连接
-- 不可靠，不保证数据一定能到达对端，可以在应用层加上可靠性机制
+- 面向无连接，类似于写信的过程，双方不需要先建立连接
 
-### 1.4 大小端
+- 不可靠，不保证数据一定能到达对端，需要在应用层增加可靠性机制
 
-大端：低位存高地址，高位存低地址（低高高低）
+  
 
-小端：低位存低地址，高位存高地址（低低高高）
+## 3. 大小端
+
+大小端指的是数据在内存中存放的一种方式
+
+- 大端：低位存高地址，高位存低地址（低高高低）
+
+- 小端：低位存低地址，高位存高地址（低低高高）
 
 ```
 下面用 unsigned int num = 0x01020304 为例，进行说明
 
      低地址 --> 高地址
-小端  04  03  02  01  
 大端  01  02  03  04 
+小端  04  03  02  01  
 ```
 
-不同架构的电脑，存储数据的大小端可能不同。一般个人电脑都是小端存储，服务器都是大端存储
+不同架构的电脑，存储方式可能不同。一般个人电脑都是小端存储，服务器都是大端存储
 
-因此，规定网络上传输数据，**统一使用大端**，网络上传输的字节序称为**网络字节序**，本地存储的字节序称为**本地字节序**。
+按照规定，网络上传输数据，**统一使用大端**，网络上传输的字节序称为**网络字节序**，本地存储的字节序称为**本地字节序**。
 
 发送时，需要将本地字节序转换为网络字节序；接收时，需要将网络字节序转换为本地字节序
 
 ```mermaid
 graph LR
 
-A[主机A 主机字节序] --> |转网络字节序| B[网络]
-B --> |转本地字节序| C[主机B 主机字节序]
+A[主机A 本地字节序] --> |转网络字节序| B[网络]
+B --> |转本地字节序| C[主机B 本地字节序]
 ```
 
-### 1.5 字节序转换
+## 4. 字节序转换
 
-用于网络传输数据时，只要超过1个字节，就需要做字节序转换。1个字节的数据无需转换，因为1个字节没有大小端的问题
+数据在网络上传输时，只要超过1个字节，就需要做字节序转换。1个字节的数据无需转换，因为1个字节没有大小端的问题
 
 ```c
 #include <arpa/inet.h>
@@ -69,7 +85,7 @@ uint16_t ntohs(uint16_t netshort);
 
 
 
-### 1.6 地址转换函数
+## 5. 地址转换函数
 
 ```c
 #include <arpa/inet.h>
@@ -77,15 +93,13 @@ uint16_t ntohs(uint16_t netshort);
 int inet_pton(int af, const char *src, void *dst);
 ```
 
-功能：将 ipv4地址的字符串形式，转换为32位的整数，转换后的整数为大端存储，即网络序；或者将ipv6地址的字符串形式，转换为128位的整数
+- 功能：将 ipv4地址的字符串形式，转换为32位的整数，转换后的整数为大端存储，即网络序；或者将ipv6地址的字符串形式，转换为128位的整数
+- 参数：
+  - af：协议族，ipv4 为 AF_INET，ipv6 为 AF_INET6
+  - src：需要转换的字符串的首地址
+  - dst：32位或128位的整数地址
 
-参数：
-
-- af：协议族，ipv4 为 AF_INET，ipv6 为 AF_INET6
-- src：需要转换的字符串的首地址
-- dst：32位或128位的整数地址
-
-返回值：成功返回1；如果要转换的字符串不是一个有效的ipv4/ipv6地址，返回0；如果af 协议族不是一个有效值，返回-1
+- 返回值：成功返回1；如果要转换的字符串不是一个有效的ipv4/ipv6地址，返回0；如果af 协议族不是一个有效值，返回-1
 
 
 
@@ -95,15 +109,15 @@ int inet_pton(int af, const char *src, void *dst);
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 ```
 
-功能：将网络序的ip地址整数形式，转换为字符串形式
+- 功能：将网络序的ip地址整数形式，转换为字符串形式
 
-参数：
+- 参数：
 
-返回值：成功返回指向dst 的非空指针，失败返回NULL
+- 返回值：成功返回指向dst 的非空指针，失败返回NULL
 
 
 
-### 1.7 socket
+## 6. socket
 
 socket为了解决不同主机上的进程间通信
 
@@ -111,23 +125,20 @@ socket必须成对出现
 
 
 
-## 2. UDP编程
+# 二、UDP编程
 
-### 2.1 C/S架构
+## 1. C/S架构模型
 
 <img src="C:\Users\machun\AppData\Roaming\Typora\typora-user-images\1596997224887.png" alt="1596997224887" style="zoom: 80%;" />
 
 
 
-服务器必须绑定固定的 IP 和端口，否则客户端不知道该往哪儿发
+- 服务器必须绑定固定的 IP 和端口，否则客户端不知道该往哪儿发
+- 客户端无需绑定本地IP和端口，需要指定服务端IP和端口，客户端发送时，本地端口由系统随机分配
 
-客户端无需绑定IP和端口，客户端发送时，端口由系统随机分配
+## 2. 函数说明
 
-
-
-### 2.2 函数说明
-
-#### 1. socket()
+### 2.1 socket()
 
 ```
 #include <sys/socket.h>
@@ -135,23 +146,22 @@ socket必须成对出现
 int socket(int domain, int type, int protocol);
 ```
 
-功能：创建一个socket
+- 功能：创建一个socket
 
-参数：
+- 参数：
+  - domain：指定通信域，用于选择通信的协议族
+    - AF_INET：用于ipv4通信
+    - AF_INET6：用于ipv6通信
+    - AF_UNIX，AF_LOCAL：用于本地通信
+  - type：指定通信语义（指定创建 TCP / UDP / RAW socket)
+    - SOCK_STREAM：流式套接字，用于TCP，提供面向连接、可靠、有序、全双工的比特流
+    - SOCK_DGRAM：数据报套接字，用于UDP，无连接、不可靠
+    - SOCK_RAW：原始套接字
+  - protocol：指定socket使用的协议，通常为0
 
-- domain：指定通信领域，用于选择通信的协议族
-  - AF_UNIX，AF_LOCAL：用于本地通信
-  - AF_INET：用于ipv4通信
-  - AF_INET6：用于ipv6通信
-- type：指定通信语义
-  - SOCK_STREAM：流式套接字，用于TCP，提供有序、可靠、全双工、面向连接的比特流
-  - SOCK_DGRAM：数据报套接字，用于UDP，无连接、不可靠
-  - SOCK_RAW：原始套接字
-- protocol：指定socket使用的协议，通常为0
+- 返回值：成功返回文件描述符；失败返回-1，并设置errno
 
-返回：成功返回文件描述符；失败返回-1，并设置errno
-
-#### 2. bind()
+### 2.2 bind()
 
 ```
 #include <sys/socket.h>
@@ -159,23 +169,26 @@ int socket(int domain, int type, int protocol);
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 ```
 
-功能：给socket 分配一个地址（IP和端口）
+- 功能：给socket 绑定IP和端口
 
-参数：
+- 参数：
+  - sockfd：绑定的socket
+  - addr：绑定的IP和端口。IP和端口为网络序，并需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体
+  - addrlen：ipv4 / ipv6 地址长度（字节数）
 
-- sockfd：要绑定的socket
-- addr：绑定的地址，需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体
-- addrlen：ipv4 / ipv6 地址长度（字节数）
+- 返回值：成功返回0，失败返回-1
 
-返回值：成功返回0，失败返回-1
+**通用套接字结构体**
 
-#### 3. sendto()
+```
+struct sockaddr 
+{
+	sa_family_t  sa_family;
+    char         sa_data[14];
+}
+```
 
 
-
-#### 4. recvfrom()
-
-#### 5. 套接字相关结构体
 
 **ipv4 套接字结构体**
 
@@ -199,24 +212,81 @@ struct in_addr
 **ipv6套接字结构体**
 
 ```
-
+https://blog.csdn.net/euyy1029/article/details/107708365utm_medium=distribute.pc_releant.none-task-blog-baidulandingword-1&spm=1001.2101.3001.4242 
 ```
 
 
 
-**通用套接字结构体**
+### 2.3 sendto()
 
 ```
-struct sockaddr 
-{
-	sa_family_t  sa_family;
-    char         sa_data[14];
-}
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+
+ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+               const struct sockaddr *dest_addr, socklen_t addrlen);
+
+ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
 ```
 
+- 功能：通过socket 发送数据
+
+- 参数：
+
+  - sockfd：发送数据的 socket
+  - buf：指向要发送数据的buf首地址
+  - len：要发送的数据长度
+  - flags：
+    - MSG_CONFIRM
+    - MSG_DONTROUTE
+    - MSG_DONTWAIT
+    - MSG_EOR
+    - MSG_MORE
+    - MSG_NOSIGNAL
+    - MSG_OOB
+  - dest_addr：目的地址
+  - addrlen：目的地址长度
+
+- 返回值：成功返回发送的字节数，失败返回-1，并设置errno
+
+  
+
+### 2.4 recvfrom()
+
+```
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                 struct sockaddr *src_addr, socklen_t *addrlen);
+
+ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
+```
+
+- 功能：从socket 接收数据。如果接收的数据过长，Buf 不够，数据可能会被丢弃；如果没有消息可以接收，recvfrom会阻塞，除非该socket设置的非阻塞，那么此时会返回-1，并设置errno为EAGAIN 或 EWOULDBLOCK
+
+- 参数：
+  - sockfd：接收数据的sokcet
+  - buf：存放数据的buf首地址
+  - len：接收buf长度
+  - flags：
+    - MSG_CMSG_CLOEXEC
+    - MSG_DONTWAIT
+    - MSG_ERRQUEUE
+    - MSG_OOB
+    - MSG_PEEK
+    - MSG_TRUNC
+    - MSG_WAITALL
+  - src_addr：如果底层协议提供消息的源地址，那么该源地址会被填入该缓冲区；如果不关心源地址，可以置为NULL
+  - addrlen：该参数初始值需要设置为src_addr的长度，返回值为源地址实际长度。如果不关心源地址，可以置为NULL
+
+- 返回值：成功返回接收到的字节数，失败返回 -1，并设置errno。如果为流式套接字，对端关闭时返回0；如果要接收的字节数为0，同样也会返回0
 
 
- https://blog.csdn.net/euyy1029/article/details/107708365?utm_medium=distribute.pc_relevant.none-task-blog-baidulandingword-1&spm=1001.2101.3001.4242 
 
 
 
