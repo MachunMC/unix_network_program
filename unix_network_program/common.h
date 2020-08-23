@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 typedef long long int	       s64;   // long long int为64位，long和int都是32位
 typedef unsigned long long int u64;

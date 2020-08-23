@@ -223,12 +223,8 @@ https://blog.csdn.net/euyy1029/article/details/107708365utm_medium=distribute.pc
 #include <sys/types.h>
 #include <sys/socket.h>
 
-ssize_t send(int sockfd, const void *buf, size_t len, int flags);
-
 ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
                const struct sockaddr *dest_addr, socklen_t addrlen);
-
-ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
 ```
 
 - 功能：通过socket 发送数据
@@ -238,7 +234,7 @@ ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
   - sockfd：发送数据的 socket
   - buf：指向要发送数据的buf首地址
   - len：要发送的数据长度
-  - flags：
+  - flags：一般为0，下面内容为特殊字段
     - MSG_CONFIRM
     - MSG_DONTROUTE
     - MSG_DONTWAIT
@@ -259,12 +255,8 @@ ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
 #include <sys/types.h>
 #include <sys/socket.h>
 
-ssize_t recv(int sockfd, void *buf, size_t len, int flags);
-
 ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
                  struct sockaddr *src_addr, socklen_t *addrlen);
-
-ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
 ```
 
 - 功能：从socket 接收数据。如果接收的数据过长，Buf 不够，数据可能会被丢弃；如果没有消息可以接收，recvfrom会阻塞，除非该socket设置的非阻塞，那么此时会返回-1，并设置errno为EAGAIN 或 EWOULDBLOCK
@@ -285,6 +277,12 @@ ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
   - addrlen：该参数初始值需要设置为src_addr的长度，返回值为源地址实际长度。如果不关心源地址，可以置为NULL
 
 - 返回值：成功返回接收到的字节数，失败返回 -1，并设置errno。如果为流式套接字，对端关闭时返回0；如果要接收的字节数为0，同样也会返回0
+
+
+
+
+
+## 3. 广播
 
 
 
