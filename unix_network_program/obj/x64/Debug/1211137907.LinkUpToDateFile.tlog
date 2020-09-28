@@ -1,1 +1,0 @@
-g++ -o "/home/machun/projects/unix_network_program/bin/x64/Debug/unix_network_program.out" -Wl,--no-undefined -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack "/home/machun/projects/unix_network_program/obj/x64/Debug/源.o"
