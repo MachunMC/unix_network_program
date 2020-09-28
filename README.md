@@ -125,11 +125,13 @@ socket必须成对出现
 
 
 
-# 二、UDP编程
+# 二、UDP编程基础
 
 ## 1. C/S架构模型
 
-<img src="C:\Users\machun\AppData\Roaming\Typora\typora-user-images\1596997224887.png" alt="1596997224887" style="zoom: 80%;" />
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/AC259A6D387149A3920235A68C66D6F2/19659)
+
+
 
 
 
@@ -176,7 +178,7 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
   - addr：绑定的IP和端口。IP和端口为网络序，并需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体
   - addrlen：ipv4 / ipv6 地址长度（字节数）
 
-- 返回值：成功返回0，失败返回-1
+- 返回值：成功返回0；失败返回-1，并设置errno
 
 **通用套接字结构体**
 
@@ -234,7 +236,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
   - sockfd：发送数据的 socket
   - buf：指向要发送数据的buf首地址
   - len：要发送的数据长度
-  - flags：一般为0，下面内容为特殊字段
+  - flags：一般为0，可使用以下参数，具体用法参考man手册
     - MSG_CONFIRM
     - MSG_DONTROUTE
     - MSG_DONTWAIT
@@ -265,7 +267,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
   - sockfd：接收数据的sokcet
   - buf：存放数据的buf首地址
   - len：接收buf长度
-  - flags：
+  - flags：一般为0，可使用以下参数，具体用法参考man手册
     - MSG_CMSG_CLOEXEC
     - MSG_DONTWAIT
     - MSG_ERRQUEUE
@@ -280,19 +282,98 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 
 
 
+# 三、TCP编程基础
 
+## 1. C/S架构模型
 
-## 3. 广播
-
-
-
-
-
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/FEDD4F54F61241939FE05E700F0E3CEA/19661)
 
 
 
+## 2. 函数说明
+
+### 2.1 connect()
+
+```c
+#include <sys/socket.h>
+
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+- 功能：连接指定地址的服务器（通常，面向连接的socket只能使用一次，面向无连接的socket可以连接多次）
+- 参数：
+  - sockfd：创建的socket
+  - addr：要连接的服务器地址
+  - addrlen：服务器地址长度
+- 返回值：成功返回0，失败返回-1，并设置errno
 
 
+
+### 2.2 send()
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+```
+
+- 功能：发送数据到已连接的对端socket
+- 参数
+  - sockfd：已连接的socket
+  - buf：要发送的数据地址
+  - len：要发送的数据长度
+  - flags：一般为0，可使用以下参数，具体用法参考man手册
+    - MSG_CONFIRM
+    - MSG_DONTROUTE
+    - MSG_DONTWAIT
+    - MSG_EOR
+    - MSG_MORE
+    - MSG_NOSIGNAL
+    - MSG_OOB
+- 返回值：成功返回已发送的字节数，失败返回-1，并设置errno
+
+
+
+### 2.3 recv()
+
+```
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+```
+
+- 功能：从已连接的socket中接收数据，默认阻塞，除非socket设置的非阻塞
+- 参数 
+  - sockfd：已连接的socket
+  - buf：接收数据的地址
+  - len：接收Buff的长度
+  - flags：一般为0，可使用以下参数，具体用法参考man手册
+    - MSG_CMSG_CLOEXEC
+    - MSG_DONTWAIT
+    - MSG_ERRQUEUE
+    - MSG_OOB
+    - MSG_PEEK
+    - MSG_TRUNC
+    - MSG_WAITALL
+- 返回值：成功返回接收的字节数，失败返回-1，并设置errno。如果socket设置为非阻塞，没有收到消息，recv会返回-1，并设置errno为 EAGAIN or EWOULDBLOCK；如果对端关闭，会返回0
+
+```
+recv() 等价于 recvfrom(fd, buf, len, flags, NULL, 0);
+```
+
+
+
+### 2.4 listen()
+
+
+
+
+
+
+
+### 2.5 accept()
 
 
 
