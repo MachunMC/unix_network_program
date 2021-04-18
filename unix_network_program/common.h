@@ -25,6 +25,7 @@ typedef unsigned int	       u8;
 #define UDP_CLIENT_SEND_BUF_LEN   256
 #define UDP_CLIENT_RECV_BUF_LEN   256
 #define TCP_SERVER_ADDR		     "127.0.0.1"
-#define TCP_SERVER_PORT			  7777
+#define TCP_SERVER_PORT			  8888
 #define TCP_SEND_BUF_LEN	      256
 #define TCP_RECV_BUF_LEN	      256
+#define TCP_LISTEN_QUEUE_LEN	  128

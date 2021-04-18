@@ -115,7 +115,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 
 - 返回值：成功返回指向dst 的非空指针，失败返回NULL
 
-
+  
 
 ## 6. socket
 
@@ -125,60 +125,7 @@ socket必须成对出现
 
 
 
-# 二、UDP编程基础
-
-## 1. C/S架构模型
-
-![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/AC259A6D387149A3920235A68C66D6F2/19659)
-
-
-
-
-
-- 服务器必须绑定固定的 IP 和端口，否则客户端不知道该往哪儿发
-- 客户端无需绑定本地IP和端口，需要指定服务端IP和端口，客户端发送时，本地端口由系统随机分配
-
-## 2. 函数说明
-
-### 2.1 socket()
-
-```
-#include <sys/socket.h>
-
-int socket(int domain, int type, int protocol);
-```
-
-- 功能：创建一个socket
-
-- 参数：
-  - domain：指定通信域，用于选择通信的协议族
-    - AF_INET：用于ipv4通信
-    - AF_INET6：用于ipv6通信
-    - AF_UNIX，AF_LOCAL：用于本地通信
-  - type：指定通信语义（指定创建 TCP / UDP / RAW socket)
-    - SOCK_STREAM：流式套接字，用于TCP，提供面向连接、可靠、有序、全双工的比特流
-    - SOCK_DGRAM：数据报套接字，用于UDP，无连接、不可靠
-    - SOCK_RAW：原始套接字
-  - protocol：指定socket使用的协议，通常为0
-
-- 返回值：成功返回文件描述符；失败返回-1，并设置errno
-
-### 2.2 bind()
-
-```
-#include <sys/socket.h>
-
-int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-```
-
-- 功能：给socket 绑定IP和端口
-
-- 参数：
-  - sockfd：绑定的socket
-  - addr：绑定的IP和端口。IP和端口为网络序，并需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体
-  - addrlen：ipv4 / ipv6 地址长度（字节数）
-
-- 返回值：成功返回0；失败返回-1，并设置errno
+## 7. 地址结构体
 
 **通用套接字结构体**
 
@@ -216,6 +163,66 @@ struct in_addr
 ```
 https://blog.csdn.net/euyy1029/article/details/107708365utm_medium=distribute.pc_releant.none-task-blog-baidulandingword-1&spm=1001.2101.3001.4242 
 ```
+
+
+
+# 二、UDP编程基础
+
+## 1. C/S架构模型
+
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/AC259A6D387149A3920235A68C66D6F2/19659)
+
+
+
+
+
+- 服务器必须绑定固定的 IP 和端口，否则客户端不知道该往哪儿发
+
+- 客户端无需绑定本地IP和端口，需要指定服务端IP和端口，客户端发送时，本地端口由系统随机分配
+
+  
+
+## 2. 函数说明
+
+### 2.1 socket()
+
+```
+#include <sys/socket.h>
+
+int socket(int domain, int type, int protocol);
+```
+
+- 功能：创建一个socket
+- 参数：
+  - domain：指定通信域，用于选择通信的协议族
+    - AF_INET：用于ipv4通信
+    - AF_INET6：用于ipv6通信
+    - AF_UNIX，AF_LOCAL：用于本地通信
+  - type：指定通信语义（指定创建 TCP / UDP / RAW socket)
+    - SOCK_STREAM：流式套接字，用于TCP，提供面向连接、可靠、有序、全双工的比特流
+    - SOCK_DGRAM：数据报套接字，用于UDP，无连接、不可靠
+    - SOCK_RAW：原始套接字
+  - protocol：指定socket使用的协议，通常为0
+- 返回值：成功返回文件描述符；失败返回-1，并设置errno
+
+**注意**：创建socket的时候，系统会为该socket分配两块缓冲区，一个用于读，一个用于写
+
+
+
+### 2.2 bind()
+
+```
+#include <sys/socket.h>
+
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+- 功能：给socket 绑定IP和端口
+- 参数：
+  - sockfd：绑定的socket
+  - addr：绑定的IP和端口。IP和端口为网络序，并需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体
+  - addrlen：ipv4 / ipv6 地址长度（字节数）
+- 返回值：成功返回0；失败返回-1，并设置errno
 
 
 
@@ -282,17 +289,32 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 
 
 
+## 3. UDP协议格式
+
+
+
 # 三、TCP编程基础
 
 ## 1. C/S架构模型
+
+**注意**：下图中的connect到accept这条线画的不对，connect箭头应该指向listen下面
 
 ![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/FEDD4F54F61241939FE05E700F0E3CEA/19661)
 
 
 
-## 2. 函数说明
+## 2. TCP服务器处理流程
 
-### 2.1 connect()
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/2F9E23982F6246399D5FD9F57D5C8981/24731)
+
+- 监听套接字：只负责和客户端建立连接，不进行数据通信
+- 已连接套接字：和客户端进行数据通信
+
+
+
+## 3. 函数说明
+
+### 3.1 connect()
 
 ```c
 #include <sys/socket.h>
@@ -309,7 +331,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 
 
 
-### 2.2 send()
+### 3.2 send()
 
 ```c
 #include <sys/types.h>
@@ -321,7 +343,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 - 功能：发送数据到已连接的对端socket
 - 参数
   - sockfd：已连接的socket
-  - buf：要发送的数据地址
+  - buf：要发送的数据Buffer
   - len：要发送的数据长度
   - flags：一般为0，可使用以下参数，具体用法参考man手册
     - MSG_CONFIRM
@@ -335,7 +357,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 
 
 
-### 2.3 recv()
+### 3.3 recv()
 
 ```
 #include <sys/types.h>
@@ -344,7 +366,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 ```
 
-- 功能：从已连接的socket中接收数据，默认阻塞，除非socket设置的非阻塞
+- 功能：从已连接的socket中接收数据，默认阻塞，除非socket设置为非阻塞
 - 参数 
   - sockfd：已连接的socket
   - buf：接收数据的地址
@@ -365,29 +387,71 @@ recv() 等价于 recvfrom(fd, buf, len, flags, NULL, 0);
 
 
 
-### 2.4 listen()
+### 3.4 listen()
+
+​		监听的时候，套接字会由主动变成被动，同时会创建两个队列，一个是已完成连接队列，一个是未完成连接队列。当客户端connect连接过来，先加入到未完成连接队列，当三次握手完成后，会加入到已完成连接队列。
+
+```c
+#include <sys/types.h>          
+#include <sys/socket.h>
+
+int listen(int sockfd, int backlog);
+```
+
+- 功能：将套接字由主动变为被动，并创建两个连接队列（已完成连接队列和未完成连接队列）
+- 参数：
+  - sockfd：
+  - backlog：两个队列长度总和的最大值，现在一般为128
+- 返回值：成功返回0，失败返回-1，并设置error
+
+
+
+### 3.5 accept()
+
+```c
+#include <sys/types.h>    
+#include <sys/socket.h>
+
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。默认是阻塞的
+
+- 参数：
+
+  - sockfd：监听套接字
+  - addr：保存客户端地址的结构体
+  - addrlen：结构体长度
+
+- 返回值：成功返回已连接套接字，失败返回-1
+
+  
+
+## 4.  TCP协议格式
+
+TCP协议包头格式：
+
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/8E7078B0A252493DB66F200196C85815/24733)
+
+
+
+TCP固定包头是20个字节（不加选项），
+
+
+
+## 5. 三次握手
+
+TCP握手为什么是三次？两次行不行
+
+
+
+## 6. 四次挥手
 
 
 
 
 
+## 7. 滑动窗口
 
-
-### 2.5 accept()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+wireshark抓包中的win指的是自己的读缓冲区大小
 

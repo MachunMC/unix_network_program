@@ -59,6 +59,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
+    <RemoteRootDir>~/vs_projects</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -82,6 +83,7 @@
     <ClCompile Include="04_UdpClient.cpp" />
     <ClCompile Include="05_UdpServer.cpp" />
     <ClCompile Include="06_TcpClient.cpp" />
+    <ClCompile Include="07_TcpServer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
