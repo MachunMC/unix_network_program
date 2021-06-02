@@ -415,7 +415,7 @@ int listen(int sockfd, int backlog);
 int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 ```
 
-- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。默认是阻塞的
+- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。**默认是阻塞的**
 - 参数：
 
   - sockfd：监听套接字
@@ -429,7 +429,7 @@ int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 
 ## 1. TCP简介
 
-​		**TCP提供一种面向连接的、可靠的、字节流的服务**。通信双方需要先建立连接，才能交换数据。TCP仅适用于双方通信，多播和广播不能用于TCP。
+​		**TCP提供一种面向连接的、可靠的、字节流的服务**。通信双方需要先建立连接，才能交换数据。TCP仅适用于双方通信，多播和广播不能用TCP。
 
 ​		TCP通过下列方式提供可靠性。
 
@@ -487,7 +487,7 @@ TCP固定包头是20个字节（不加选项）
 ## 3. 三次握手
 
 - TCP的三次握手，对应的是tcp connect请求。调用connect函数，底层协议栈会和对端进行三次握手
-- 三次握手成功后，服务端会将该连接由**未完成连接队列**加入到**已完成连接队列**（该队列是listen的时候创建）
+- 三次握手成功后，服务端会将该连接由**未完成连接队列**加入到**已完成连接队列**（该队列是listen的时候创建），然后accept会从**已完成连接队列**中提取连接，并创建一个已连接套接字，和这个客户端进行通信
 - 如果server收到SYN，并且也回复了SYN + ACK，但始终收不到client的ACK，久而久之，server的未完成连接队列就会满，进而无法处理新的连接，这就是以前的**SYN攻击**，现在应该有机制来处理这种问题
 
 <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/E6E8EF8754D74A918F92E3E3E46A7538/26765" style="zoom:80%;" />
@@ -516,16 +516,20 @@ TCP固定包头是20个字节（不加选项）
 
 
 
-TCP握手为什么是三次？两次行不行
+**TCP握手为什么是三次？两次行不行？**
+
+答：不行，因为第二次握手时，server也向client发起了连接请求，server需要明确client收到了请求，所以需要第三条信令，让server知道client收到了请求，并且准备好了。
+
+​		如果只有两次握手，如果第二条信令丢失，则server 认为握手已经完成，而client则因为没有收到server的确认，认为握手失败，就导致两边的状态不一致。
 
 
 
 ## 4. 四次挥手
 
 - 四次挥手发生在，客户端主动调用close关闭连接（**当然也有可能是服务端主动关闭连接**）
-- 客户端调用close，服务端会收到长度为0的数据，表示客户端要断开连接，此时服务端也应该调用close断开连接
-- 抓包有时候会看到，服务器的ACK和FIN是一起发过去的，这是因为TCP有一个原则是尽可能携带更多数据，此时四次挥手就变成了三次挥手
-- 客户端调用close后，协议栈并没有关闭，还在等待对方的确认。当收到对方的FIN，并回复ACK后，协议栈并不会立即关闭，还会等待一段时间，因为客户端回复的ACK中途可能丢了，然后服务器还会再发送一个FIN，客户端等待的时间为2MSL。谁先主动关闭，谁就需要等待
+- 客户端调用close，服务端会收到长度为0的数据，表示对端请求断开连接，此时服务端也应该调用close断开连接
+- 抓包有时候会看到，服务器的ACK和FIN是一起发过去的，这是因为TCP有一个原则是，尽可能携带更多数据，此时四次挥手就变成了三次挥手
+- 客户端调用close后，协议栈并没有关闭，还在等待对方的确认。当收到对方的FIN，并回复ACK后，协议栈并不会立即关闭，还会等待一段时间，因为回复的ACK中途可能丢了，然后服务器收不到确认还会重传。客户端等待的时间为2MSL，谁先主动关闭，谁就需要等待
 
 
 
@@ -543,7 +547,7 @@ TCP握手为什么是三次？两次行不行
 
 **第三次挥手**
 
-客户端请求断开连接，服务端recv会返回0，表示对端请求关闭，此时服务端也应该调用close关闭连接，协议栈会发送FIN请求
+服务端recv会返回0，表示对端请求关闭，此时服务端也应该调用close关闭连接，对应的协议栈会发送FIN请求
 
 **第四次挥手**
 
@@ -567,6 +571,10 @@ TCP握手为什么是三次？两次行不行
 **注意下图，SYN_RCVD状态前，接收RST这个不对，应该是接收SYN**
 
 <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/DA27FD1BC22441739253C4C5CFAC9B54/26804" style="zoom: 50%;" />
+
+对应到 TCP建立连接和断开连接
+
+<img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/020F4C2C4C6E45F3A3002F94ACFFF958/26851" style="zoom:80%;" />
 
 
 
@@ -601,4 +609,79 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 滑动窗口站16个字节，最大65535
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/73FA2F18E9B14DB693E779027484D773/26800)
+
+## 9. IO复用
+
+IO复用，只用一个进程或线程，来实现并发控制。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
+
+### 9.1 select
+
+```c
+/* According to POSIX.1-2001, POSIX.1-2008 */
+#include <sys/select.h>
+
+/* According to earlier standards */
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+```
+
+- 功能：监听多个文件描述符读写属性的变化（也就是读写缓冲区的变化）
+- 参数：
+  - nfds：监听的最大文件描述符 + 1
+  - readfds：需要监听的读属性变化的文件描述符集合
+  - writefds：需要监听的写属性变化的文件描述符集合
+  - exceptfds：异常的文件描述符集合
+  - timeout：超时时间。NULL表示阻塞，一直监听
+- 返回值：属性变化的文件描述符个数
+
+
+
+```
+struct timeval 
+{
+	long    tv_sec;         /* seconds */
+	long    tv_usec;        /* microseconds */
+};
+```
+
+
+
+**文件描述符操作函数**
+
+```c
+void FD_CLR(int fd, fd_set *set);
+```
+
+功能：将文件描述符fd从集合中清除
+
+
+
+```c
+int  FD_ISSET(int fd, fd_set *set);
+```
+
+功能：判断文件描述符fd是否在集合中。在返回非0，不在返回0
+
+
+
+```c
+void FD_SET(int fd, fd_set *set);
+```
+
+功能：将文件描述符fd添加到集合中
+
+
+
+```c
+void FD_ZERO(fd_set *set);
+```
+
+功能：清空文件描述符
+
+
+
+### 9.2 epoll
 
