@@ -612,7 +612,7 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
 ## 9. IO复用
 
-IO复用，只用一个进程或线程，来实现并发控制。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
+IO复用，只用一个进程或线程，来实现多路并发。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
 
 ### 9.1 select
 
@@ -628,14 +628,14 @@ IO复用，只用一个进程或线程，来实现并发控制。其本质上是
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
 ```
 
-- 功能：监听多个文件描述符读写属性的变化（也就是读写缓冲区的变化）
+- 功能：监听多个文件描述符读写属性的变化（也就是读写缓冲区的变化）。当select返回时，会修改对应的文件描述符集合
 - 参数：
   - nfds：监听的最大文件描述符 + 1
   - readfds：需要监听的读属性变化的文件描述符集合
   - writefds：需要监听的写属性变化的文件描述符集合
   - exceptfds：异常的文件描述符集合
   - timeout：超时时间。NULL表示阻塞，一直监听
-- 返回值：属性变化的文件描述符个数
+- 返回值：成功返回属性变化的文件描述符个数，失败返回-1，
 
 
 

@@ -84,6 +84,7 @@
     <ClCompile Include="05_UdpServer.cpp" />
     <ClCompile Include="06_TcpClient.cpp" />
     <ClCompile Include="07_TcpServer.cpp" />
+    <ClCompile Include="08_select.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
