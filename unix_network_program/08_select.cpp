@@ -9,11 +9,13 @@
 
 int main()
 {
-	s32 i = 0;
+	s32 i = 0, j = 0;
 	s32 nRet = 0;
 	s32 nListenFd = 0;
 	s32 nAcceptFd = 0;
 	s32 nMaxFd = 0;
+	u32 dwSelectFdCnt = 0;
+	s32 anSelectFdSet[FD_SETSIZE] = { 0 }; // 用来保存添加到待监听的文件描述符集合，长度1024
 	s32 nOpt = 0;
 	socklen_t nAddrLen = 0;
 	fd_set tReadSet;
@@ -62,6 +64,9 @@ int main()
 	FD_SET(nListenFd, &tOldSet);
 	nMaxFd = nListenFd;
 
+	anSelectFdSet[dwSelectFdCnt] = nListenFd;
+	dwSelectFdCnt++;
+
 	while (1)
 	{
 		tReadSet = tOldSet;
@@ -69,19 +74,15 @@ int main()
 		nRet = select(nMaxFd + 1, &tReadSet, NULL, NULL, NULL);
 		if (nRet > 0) // 有文件可读
 		{
-			printf("%d fd change", nRet);
-
 			// 这里的返回值其实没用，因为只知道有几个文件描述符属性变化，不知道具体是哪个，
 			// 还需要通过遍历的方式找到属性变化的文件描述符，如果中间有很多文件描述符没用，其实效率很低。
 			// epoll相比较而言，有个参数可以将文件描述符传进去，这样就不需要去遍历，可以提高效率
 			// 这里需要遍历所有文件描述符
-			for (i = 1; i < nMaxFd; i++)
+			for (i = 0; i < dwSelectFdCnt; i++)
 			{
-				// 可以自定义一个数组，将文件描述符保存到这个数组里！！！
-				// 不需要遍历所有文件描述符，只需要遍历数组的有效元素即可
-				if (FD_ISSET(i, &tReadSet))
+				if (FD_ISSET(anSelectFdSet[i], &tReadSet))
 				{
-					if (i == nListenFd) // 有新的连接
+					if (anSelectFdSet[i] == nListenFd) // 有新的连接
 					{
 						nAddrLen = sizeof(tClientAddr);
 						nAcceptFd = accept(nListenFd, (struct sockaddr*)&tClientAddr, &nAddrLen);
@@ -100,26 +101,39 @@ int main()
 							{
 								nMaxFd = nAcceptFd;
 							}
+							anSelectFdSet[dwSelectFdCnt] = nAcceptFd;
+							dwSelectFdCnt++;
 						}
 					}
 					else // 有数据可读 
 					{
-						nRet = recv(i, achRecvBuf, (size_t)sizeof(achRecvBuf), 0);
-						if (nRet == 0) // 对方关闭
+						memset(achRecvBuf, 0, sizeof(achRecvBuf));
+						nRet = recv(anSelectFdSet[i], achRecvBuf, (size_t)sizeof(achRecvBuf), 0);
+						if (0 == nRet || -1 == nRet) // 对方关闭或出错
 						{
-							printf("client closed\n");
+							if (0 == nRet)
+							{
+								printf("client closed\n");
+							}
+							else
+							{
+								printf("recv failed, error:%s\n", strerror(errno));
+							}
 
 							// 从监听的文件描述符集合中清除，并关闭该socket
-							FD_CLR(i, &tOldSet);
-							close(i);
-							continue;
-						}
-						else if (nRet < 0) // 出错
-						{
-							printf("recv failed, error:%s\n", strerror(errno));
+							FD_CLR(anSelectFdSet[i], &tOldSet);
+							close(anSelectFdSet[i]);
 
-							FD_CLR(i, &tOldSet);
-							close(i);
+							// 将本地fd数组对应的fd置0
+							// 可以将数组长度减1，否则后面一直++，dwSelectFdCnt可能超过1024
+							for (j = 0; j < dwSelectFdCnt; j++)
+							{
+								if (anSelectFdSet[i] == anSelectFdSet[dwSelectFdCnt])
+								{
+									anSelectFdSet[dwSelectFdCnt] = 0;
+								}
+							}
+
 							continue;
 						}
 						else // 接收到数据
