@@ -176,7 +176,7 @@ https://blog.csdn.net/euyy1029/article/details/107708365utm_medium=distribute.pc
 
 ## 1. C/S架构模型
 
-![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/AC259A6D387149A3920235A68C66D6F2/19659)
+<img src="https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/AC259A6D387149A3920235A68C66D6F2/19659" style="zoom: 67%;" />
 
 
 
@@ -819,4 +819,10 @@ fcntl(fd, F_SETFL, flag);
 ### 10.5 epoll + 线程池
 
 一个线程中，while循环处理epoll_wait的事件，会有一个问题。如果某些处理比较耗时，就会导致epoll_wait处理不及时，影响其他事件的处理。一般采用 epoll + 线程池的方式来解决这个问题
+
+
+
+# 五、原始套接字
+
+
 
