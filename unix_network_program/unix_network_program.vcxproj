@@ -86,6 +86,7 @@
     <ClCompile Include="06_TcpClient.cpp" />
     <ClCompile Include="07_TcpServer.cpp" />
     <ClCompile Include="08_select.cpp" />
+    <ClCompile Include="09_epoll.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />

@@ -1,3 +1,9 @@
+# TO DO LIST
+
+- [ ] 了解线程池
+
+
+
 # 一、编程基础
 
 ## 1. 网络开发模型
@@ -610,11 +616,9 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/73FA2F18E9B14DB693E779027484D773/26800)
 
-## 9. IO复用
+## 9. IO复用之select
 
 IO复用，只用一个进程或线程，来实现多路并发。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
-
-### 9.1 select
 
 **优点：**
 
@@ -623,8 +627,10 @@ IO复用，只用一个进程或线程，来实现多路并发。其本质上是
 **缺点：**
 
 - 有最大1024个文件描述符的限制（可以修改宏FD_SETSIZE，但需要重新编译内核，比较麻烦）
-- 每次重新监听，都需要将监听的文件描述符集合，从用户态拷贝到内核态
+- 每次重新监听，需要重新添加文件描述符（将需要监听的文件描述符集合，从用户态拷贝到内核态）
 - 如果同时有大量连接，但只有少部分文件描述符活跃，由于需要遍历文件描述符是否在集合内，所以会导致效率很低
+
+
 
 ```c
 /* According to POSIX.1-2001, POSIX.1-2008 */
@@ -636,6 +642,12 @@ IO复用，只用一个进程或线程，来实现多路并发。其本质上是
 #include <unistd.h>
 
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+
+struct timeval 
+{
+	long    tv_sec;         /* seconds */
+	long    tv_usec;        /* microseconds */
+};
 ```
 
 - 功能：监听多个文件描述符读写属性的变化（也就是读写缓冲区的变化）。**当select返回时，会修改对应的文件描述符集合**
@@ -646,16 +658,6 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
   - exceptfds：异常的文件描述符集合
   - timeout：超时时间。NULL表示阻塞，一直监听
 - 返回值：成功返回属性变化的文件描述符个数，失败返回-1，超时返回0
-
-
-
-```
-struct timeval 
-{
-	long    tv_sec;         /* seconds */
-	long    tv_usec;        /* microseconds */
-};
-```
 
 
 
@@ -693,5 +695,128 @@ void FD_ZERO(fd_set *set);
 
 
 
-### 9.2 epoll
+## 10. IO复用之epoll
+
+epoll的底层实现，是**红黑树**
+
+**优点：**
+
+- 没有文件描述符限制（修改ulimit限制即可）
+- 每次重新监听，不需要重新添加文件描述符
+- 监听到文件描述符变化，会返回变化的文件描述符（不需要遍历查找变化的文件描述符）
+
+### 10.1 epoll_create
+
+```c
+#include <sys/epoll.h>
+
+int epoll_create(int size);
+```
+
+- 功能：创建一个epoll句柄
+- 参数：epoll监听的数量，大于0即可。Since Linux 2.6.8, the size argument is ignored, but must be greater than zero
+- 返回值：成功返回epoll句柄，失败返回-1
+
+### 10.2 epoll_ctl
+
+```c
+#include <sys/epoll.h>
+
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+
+typedef union epoll_data {
+	void        *ptr;
+    int          fd;
+    uint32_t     u32;
+    uint64_t     u64;
+} epoll_data_t;
+
+struct epoll_event {
+	uint32_t     events;      /* Epoll events */
+    epoll_data_t data;        /* User data variable */
+};
+
+events：
+    - EPOLLIN：文件描述符是否可读
+	- EPOLLOUT：文件描述符是否可写
+    - 其他
+```
+
+- 功能：注册需要监听的文件描述符和对应的事件
+- 参数：
+  - epfd：epoll句柄，epoll_create创建的文件描述符
+  - op：文件描述符操作
+    - EPOLL_CTL_ADD：**添加**需要监听的文件描述符和对应的事件
+    - EPOLL_CTL_DEL：**删除**需要监听的文件描述符和对应的事件
+    - EPOLL_CTL_MOD：**修改**需要监听的文件描述符和对应的事件
+  - fd：需要监听的文件描述符
+  - event：需要监听的fd的事件类型
+    - events：监听的事件类型。**按位操作**，可以使用按位与监听多个事件
+    - data：用户数据，可以用来传递文件描述符或其他需要传递的信息
+- 返回值：成功返回0，失败返回-1
+
+### 10.3 epoll_wait
+
+```c
+#include <sys/epoll.h>
+
+int epoll_wait(int epfd, struct epoll_event *events,int maxevents, int timeout);
+```
+
+- 功能：监听文件描述符事件变化
+- 参数
+  - epfd：epoll句柄
+  - events：返回的事件，需要传递结构体数组指针
+  - maxevents：数组长度
+  - timeout：超时时间，单位ms。-1表示一直等待，0表示不阻塞
+- 返回值：变化的文件描述符个数。0表示超时时间到，没有文件描述符有事件变化；-1表示出错
+
+### 10.4 水平触发和边沿触发
+
+epoll_wait有两种触发方式，一个是水平触发，一个是边沿触发。
+
+**读缓冲区**
+
+- 水平触发（EPOLLLT）：epoll_wait默认的触发方式，读缓冲区只要有数据就会触发。如果缓冲区的数据没有读完，会一直触发
+- 边沿触发（EPOLLET）：读缓冲区收到数据就会触发。只有收到数据后才会触发，触发后如果数据没有读完，在没有收到新数据之前，不会触发。所以**如果设置了边沿触发，一定要保证数据能读完**
+
+**写缓冲区**
+
+- 水平触发：只要写缓冲区没有满，就会一直触发。这种触发方式不好
+- 边沿触发：只要写缓冲区的数据发送一次，就会触发一次
+
+
+
+读缓冲区设置为水平触发和边沿触发都可以，但设置为边沿触发，可以减少内核态向用户态的切换，可以提高效率，只要保证数据可以读完就可以。但写缓冲区如果设置为水平触发，就会一直触发，这样不好，所以要设置为边沿触发。
+
+**所以，如果只监听读事件，可以使用默认的水平触发；如果除了监听读事件，还要监听写事件，要设置为边沿触发**
+
+
+
+```c
+tEpollEvent.events = EPOLLIN | EPOLLET; // EPOLLET表示设置为边沿触发
+tEpollEvent.data.fd = nListenFd;
+epoll_ctl(nEpollFd, EPOLL_CTL_ADD, nListenFd, &tEpollEvent);
+```
+
+
+
+**如何保证将数据读完？**
+
+循环读，直到缓冲区没有数据。但是recv是阻塞的，所以需要将fd设置成非阻塞，当recv返回-1，且errno为 EAGAIN或EWOULDBLOCK，表示缓冲区暂时没有数据可读
+
+```
+// 设置fd为非阻塞
+int flag = fcntl(fd, F_GETFL);
+flag |= O_NONBLOCK;
+fcntl(fd, F_SETFL, flag);
+```
+
+
+
+![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/249DDF72D9FC453DAA586DCA1F50FF66/26916)
+
+### 10.5 epoll + 线程池
+
+一个线程中，while循环处理epoll_wait的事件，会有一个问题。如果某些处理比较耗时，就会导致epoll_wait处理不及时，影响其他事件的处理。一般采用 epoll + 线程池的方式来解决这个问题
 
