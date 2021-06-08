@@ -8,6 +8,14 @@
 #include <arpa/inet.h>
 #include "define.h"
 
+int http_req_handle(s8* pchData)
+{
+	printf("%s\n", pchData);
+
+
+	return 0;
+}
+
 int main()
 {
 	s32 i = 0;
@@ -49,6 +57,13 @@ int main()
 		return -1;
 	}
 
+	nRet = listen(nListenFd, 128);
+	if (-1 == nRet)
+	{
+		printf("listen failed, error:%s\n", strerror(errno));
+		return -1;
+	}
+
 	nEpollFd = epoll_create(1);
 	if (-1 == nEpollFd)
 	{
@@ -65,11 +80,10 @@ int main()
 		return -1;
 	}
 
-
 	while (1)
 	{
 		// 阻塞
-		nEpollCnt = epoll_wait(nEpollFd, atEpollEvent, 1024, -1);
+		nEpollCnt = epoll_wait(nEpollFd, atEpollEvent, 1024, 200);
 		if (nEpollCnt == -1) // 出错
 		{
 			printf("epoll_wait failed, error:%s\n", strerror(errno));
@@ -77,6 +91,7 @@ int main()
 		}
 		else if (nEpollCnt == 0) // 超时
 		{
+			printf("epoll_wait timeout\n");
 			continue;
 		}
 		else // 有事件触发
@@ -115,7 +130,7 @@ int main()
 					{
 						memset(achRecvBuf, 0, sizeof(achRecvBuf));
 						nRet = recv(atEpollEvent[i].data.fd, achRecvBuf, sizeof(achRecvBuf), 0);
-						if (nRet == 0 || -1 == nRet)
+						if (nRet == 0 || -1 == nRet) // 对方关闭或出错
 						{
 							if (nRet == 0)
 							{
@@ -126,10 +141,7 @@ int main()
 								printf("recv failed, error:%s\n", strerror(errno));
 							}
 
-							memset(&tTmpEvent, 0, sizeof(tTmpEvent));
-							tTmpEvent.events = EPOLLIN;
-							tTmpEvent.data.fd = atEpollEvent[i].data.fd;
-							nRet = epoll_ctl(nEpollFd, EPOLL_CTL_DEL, atEpollEvent[i].data.fd, &tTmpEvent);
+							nRet = epoll_ctl(nEpollFd, EPOLL_CTL_DEL, atEpollEvent[i].data.fd, &atEpollEvent[i]);
 							if (-1 == nRet)
 							{
 								printf("epoll_ctl add accept fd failed, error:%s\n", strerror(errno));
@@ -137,9 +149,9 @@ int main()
 							
 							continue;
 						}
-						else // 接收数据
+						else // 收到数据
 						{
-
+							http_req_handle(achRecvBuf);
 						}
 					}
 				}
