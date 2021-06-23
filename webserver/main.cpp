@@ -12,7 +12,6 @@ int http_req_handle(s8* pchData)
 {
 	printf("%s\n", pchData);
 
-
 	return 0;
 }
 
@@ -91,7 +90,6 @@ int main()
 		}
 		else if (nEpollCnt == 0) // 超时
 		{
-			printf("epoll_wait timeout\n");
 			continue;
 		}
 		else // 有事件触发
@@ -106,7 +104,7 @@ int main()
 						nAcceptFd = accept(nListenFd, (struct sockaddr*)&tClientAddr, &nSockLen);
 						if (-1 == nAcceptFd)
 						{
-							printf("epoll_wait failed, error:%s\n", strerror(errno));
+							printf("accept failed, error:%s\n", strerror(errno));
 							continue;
 						}
 						else // 添加新的fd到epoll
@@ -128,6 +126,8 @@ int main()
 					}
 					else // 有数据可读
 					{
+						printf("recv data\n");
+
 						memset(achRecvBuf, 0, sizeof(achRecvBuf));
 						nRet = recv(atEpollEvent[i].data.fd, achRecvBuf, sizeof(achRecvBuf), 0);
 						if (nRet == 0 || -1 == nRet) // 对方关闭或出错
