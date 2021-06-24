@@ -634,7 +634,24 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/73FA2F18E9B14DB693E779027484D773/26800)
 
-## 9. IO复用之select
+## 9. 拥塞控制
+
+拥塞控制包含4个部分
+
+- 慢启动（slow start）
+- 拥塞避免（congestion avoidance）
+- 快速重传（fast retransmit）
+- 快速恢复（fast recovery）
+
+## 10. 复位报文段（RST）
+
+某些特殊情况下，TCP连接的一端会往另一端发送携带RST的复位报文段，通知对方关闭连接或重新建立连接。常见的有3种情况
+
+- 访问的端口不存在，会返回RST复位报文段
+- 一端异常终止连接，会发送RST复位报文段
+- 往半打开状态下的一端发送数据，会返回RST复位报文段
+
+## 11. IO复用之select
 
 IO复用，只用一个进程或线程，来实现多路并发。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
 
@@ -713,7 +730,7 @@ void FD_ZERO(fd_set *set);
 
 
 
-## 10. IO复用之epoll
+## 12. IO复用之epoll
 
 epoll的底层实现，是**红黑树**
 
@@ -723,7 +740,7 @@ epoll的底层实现，是**红黑树**
 - 每次重新监听，不需要重新添加文件描述符
 - 监听到文件描述符变化，会返回变化的文件描述符（不需要遍历查找变化的文件描述符）
 
-### 10.1 epoll_create
+### 12.1 epoll_create
 
 ```c
 #include <sys/epoll.h>
@@ -735,7 +752,7 @@ int epoll_create(int size);
 - 参数：epoll监听的数量，大于0即可。Since Linux 2.6.8, the size argument is ignored, but must be greater than zero
 - 返回值：成功返回epoll句柄，失败返回-1
 
-### 10.2 epoll_ctl
+### 12.2 epoll_ctl
 
 ```c
 #include <sys/epoll.h>
@@ -773,7 +790,7 @@ events：
     - data：用户数据，可以用来传递文件描述符或其他需要传递的信息
 - 返回值：成功返回0，失败返回-1
 
-### 10.3 epoll_wait
+### 12.3 epoll_wait
 
 ```c
 #include <sys/epoll.h>
@@ -789,7 +806,7 @@ int epoll_wait(int epfd, struct epoll_event *events,int maxevents, int timeout);
   - timeout：超时时间，单位ms。-1表示一直等待，0表示不阻塞
 - 返回值：变化的文件描述符个数。0表示超时时间到，没有文件描述符有事件变化；-1表示出错
 
-### 10.4 水平触发和边沿触发
+### 12.4 水平触发和边沿触发
 
 epoll_wait有两种触发方式，一个是水平触发，一个是边沿触发。
 
@@ -834,7 +851,7 @@ fcntl(fd, F_SETFL, flag);
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/249DDF72D9FC453DAA586DCA1F50FF66/26916)
 
-### 10.5 epoll + 线程池
+### 12.5 epoll + 线程池
 
 一个线程中，while循环处理epoll_wait的事件，会有一个问题。如果某些处理比较耗时，就会导致epoll_wait处理不及时，影响其他事件的处理。一般采用 epoll + 线程池的方式来解决这个问题
 
@@ -842,7 +859,7 @@ fcntl(fd, F_SETFL, flag);
 
 # 五、UDP协议
 
-
+数据报套接字
 
 # 六、IP协议
 
@@ -892,3 +909,41 @@ IP层根据路由表，来决定数据如何转发。
 
 ## 5. IP层收到数据后如何处理？
 
+# 七、原始套接字
+
+## 1. 简介
+
+TCP和UDP套接字，只能收发应用层数据，收到的数据不包含传输层、网络层、数据链路层的协议头。如果想要修改源、目的IP或者mac地址，TCP和UDP套接字就无能为力了。
+
+原始套接字（SOCK_RAW），可以接收数据链路层的所有数据帧，可以自己组装各种协议头。一般可以用于抓包和网络流量分析。
+
+## 2. 创建原始套接字
+
+```c
+#include <sys/socket.h>
+#include <linux/if_ether.h>
+
+int socket(PF_PACKET, SOCK_RAW, protocol);
+```
+
+- 功能：创建链路层的原始套接字
+- 参数：
+  - protocol：指定收发的数据包类型
+    - ETH_P_IP：IPv4数据包
+    - ETH_P_ARP：ARP数据包
+    - ETH_P_ALL：任何协议类型的数据包
+- 返回值：成功返回套接字fd，失败返回-1
+
+
+
+一般这样使用
+
+```c
+#include <sys/socket.h>
+#include <linux/if_ether.h>
+int sock_fd = 0;
+
+sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+```
+
+接收使用recvfrom，发送使用
