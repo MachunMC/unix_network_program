@@ -40,9 +40,9 @@ TCP和UDP属于传输层协议，IP为网络层协议
 
   
 
-## 3. 大小端
+## 3. 字节序
 
-大小端指的是数据在内存中存放的一种方式
+字节序指的是数据在内存中存放的一种方式，分为大端字节序和小端字节序
 
 - 大端：低位存高地址，高位存低地址（低高高低）
 
@@ -135,7 +135,7 @@ socket必须成对出现
 
 **通用套接字结构体**
 
-```
+```c
 struct sockaddr 
 {
 	sa_family_t  sa_family;
@@ -147,7 +147,7 @@ struct sockaddr
 
 **ipv4 套接字结构体**
 
-```
+```c
 struct sockaddr_in 
 {
 	sa_family_t     sin_family; /* address family: AF_INET */
