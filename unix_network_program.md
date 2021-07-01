@@ -1,3 +1,15 @@
+# 参数书籍
+
+- 《Linux高性能网络编程》
+
+
+
+# 疑问
+
+- [ ] TCP有发送接收缓冲区，UDP有吗？
+
+  
+
 # 一、编程基础
 
 ## 1. 网络开发模型
@@ -439,6 +451,39 @@ int getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 
 - 功能：获取socket对应的对端的ip和端口信息
 - 参数：
+- 返回值：成功返回0，失败返回-1
+
+### 3.10 getsockopt()
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+```
+
+- 功能：获取socket选项
+- 参数：
+  - sockfd：要设置的socket fd
+  - level：指定要操作哪个协议的选项
+  - optname：指定选项的名字
+  - optval：保存选项的值
+  - optlen：选项的长度
+- 返回值：成功返回0，失败返回-1
+
+![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/7898B29AF69A4160BF2779A99C670685/27334)
+
+### 3.11 setsockopt()
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+```
+
+- 功能：设置socket选项
+- 参数：同上
 - 返回值：成功返回0，失败返回-1
 
 # 四、TCP协议
@@ -957,3 +1002,71 @@ sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 ```
 
 接收使用recvfrom，发送使用
+
+# 八、其他
+
+## 1. TCP socket缓冲区大小
+
+系统版本信息：centos 7
+
+```shell
+[machun@localhost ipv4]$ cat /proc/version 
+Linux version 3.10.0-1127.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Tue Mar 31 23:36:51 UTC 2020
+```
+
+### 1.1 通过/proc查看socket缓冲区大小
+
+查看TCP发送、接收缓冲区大小
+
+```shell
+[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_wmem 
+4096	16384	4194304   // 默认值为16384
+[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_rmem 
+4096	87380	6291456   // 默认值为87380
+```
+
+### 1.2 getsockopt获取缓冲区大小
+
+通过如下代码，可以获取tcp socket读写缓冲区大小
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+dwLen = sizeof(nRcvBufLen);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVBUF, &nRcvBufLen, &dwLen);
+
+dwLen = sizeof(nSndBufLen);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDBUF, &nSndBufLen, &dwLen);
+```
+
+运行结果如下：
+
+```
+getsockopt tcp socket SO_RCVBUF succ, nRcvBufLen:87380
+getsockopt tcp socket SO_SNDBUF succ, nSndBufLen:16384
+```
+
+可以通过setsockopt函数，设置socket发送、接收缓冲区大小，但实际生效的值，是我们设置的2倍
+
+## 2. TCP socket缓冲区低水位标志
+
+TCP socket缓冲区低水位标志，用于IO复用时，判断socket是否可读可写。当TCP socket接收缓冲区中的可读数据量大于其低水位时，IO复用接口将通知上层应用可以从socket读取数据；当TCP socket发送缓冲区中的空闲空间（可写入的空间）大于其低水位时，IO复用接口将通知上层应用可以往socket写入数据。
+
+默认情况下，TCP发送、接收缓冲区低水位标志，均为1字节
+
+```c
+dwLen = sizeof(nRcvLowFlag);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVLOWAT, &nRcvLowFlag, &dwLen); // TCP接收缓冲区低水位标志
+    
+dwLen = sizeof(nSndLowFlag);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDLOWAT, &nSndLowFlag, &dwLen); // TCP发送缓冲区低水位标志
+```
+
+打印如下
+
+```
+getsockopt tcp socket SO_RCVLOWAT succ, nRcvLowFlag:1
+getsockopt tcp socket SO_SNDLOWAT succ, nSndLowFlag:1
+```
+
