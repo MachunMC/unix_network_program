@@ -1,12 +1,13 @@
-# 参数书籍
+# 参考教程和书籍
 
+- [千峰物联网学科linux网络编程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1RJ411B761?p=1)
 - 《Linux高性能网络编程》
+- 
 
 # 疑问
 
 - [ ] TCP有发送接收缓冲区，UDP有吗？
 
-  
 
 # 一、编程基础
 
@@ -908,44 +909,76 @@ fcntl(fd, F_SETFL, flag);
 
 一个线程中，while循环处理epoll_wait的事件，会有一个问题。如果某些处理比较耗时，就会导致epoll_wait处理不及时，影响其他事件的处理。一般采用 epoll + 线程池的方式来解决这个问题
 
-# 五、高级IO函数
+## 13. TCP socket缓冲区大小
 
-## 1. pipe()
+系统版本信息：centos 7
 
-```c
-#include <unistd.h>
-
-int pipe(int fd[2]);
+```shell
+[machun@localhost ipv4]$ cat /proc/version 
+Linux version 3.10.0-1127.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Tue Mar 31 23:36:51 UTC 2020
 ```
 
-- 功能：创建一根管道，用于进程间通信
-- 参数：包含两个int型变量的数组首地址
-- 返回值：成功返回0，失败返回-1
+### 13.1 通过/proc查看socket缓冲区大小
 
-创建成功后，fd[0]和fd[1]两个文件描述符，分别表示管道的两端，fd[0]用于读，fd[1]用于写，从fd[1]写入的数据可以从fd[0]读取。如果要实现双向管道，需要创建两根管道。默认情况下，两个文件描述符都是阻塞的
+查看TCP发送、接收缓冲区大小
 
-## 2. dup()和dup2()
-
-```c
-#include <unistd.h>
-
-int dup(int oldfd);
-int dup2(int oldfd, int newfd);
+```shell
+[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_wmem 
+4096	16384	4194304   // 默认值为16384
+[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_rmem 
+4096	87380	6291456   // 默认值为87380
 ```
 
+### 13.2 getsockopt获取缓冲区大小
 
+通过如下代码，可以获取tcp socket读写缓冲区大小
 
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
 
+dwLen = sizeof(nRcvBufLen);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVBUF, &nRcvBufLen, &dwLen);
 
+dwLen = sizeof(nSndBufLen);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDBUF, &nSndBufLen, &dwLen);
+```
 
+运行结果如下：
 
+```
+getsockopt tcp socket SO_RCVBUF succ, nRcvBufLen:87380
+getsockopt tcp socket SO_SNDBUF succ, nSndBufLen:16384
+```
 
+可以通过setsockopt函数，设置socket发送、接收缓冲区大小，但实际生效的值，是我们设置的2倍
 
-# 六、UDP协议
+## 14. TCP socket缓冲区低水位标志
+
+TCP socket缓冲区低水位标志，用于IO复用时，判断socket是否可读可写。当TCP socket接收缓冲区中的可读数据量大于其低水位时，IO复用接口将通知上层应用可以从socket读取数据；当TCP socket发送缓冲区中的空闲空间（可写入的空间）大于其低水位时，IO复用接口将通知上层应用可以往socket写入数据。
+
+默认情况下，TCP发送、接收缓冲区低水位标志，均为1字节
+
+```c
+dwLen = sizeof(nRcvLowFlag);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVLOWAT, &nRcvLowFlag, &dwLen); // TCP接收缓冲区低水位标志
+    
+dwLen = sizeof(nSndLowFlag);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDLOWAT, &nSndLowFlag, &dwLen); // TCP发送缓冲区低水位标志
+```
+
+打印如下
+
+```
+getsockopt tcp socket SO_RCVLOWAT succ, nRcvLowFlag:1
+getsockopt tcp socket SO_SNDLOWAT succ, nSndLowFlag:1
+```
+
+# 五、UDP协议
 
 数据报套接字
 
-# 七、IP协议
+# 六、IP协议
 
 ## 1. 简介
 
@@ -993,6 +1026,115 @@ IP层根据路由表，来决定数据如何转发。
 
 ## 5. IP层收到数据后如何处理？
 
+# 七、高级IO函数
+
+## 1. pipe()
+
+```c
+#include <unistd.h>
+
+int pipe(int fd[2]);
+```
+
+- 功能：创建一根管道，用于进程间通信
+- 参数：包含两个int型变量的数组首地址
+- 返回值：成功返回0，失败返回-1
+
+创建成功后，fd[0]和fd[1]两个文件描述符，分别表示管道的两端，fd[0]用于读，fd[1]用于写，从fd[1]写入的数据可以从fd[0]读取。如果要实现双向管道，需要创建两根管道。默认情况下，两个文件描述符都是阻塞的
+
+socketpair可以创建双向管道，但domain只能使用UNIX本地域协议族 AF_UNIX，只能在本地使用这个双向管道
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+int socketpair(int domain, int type, int protocol, int sv[2]);
+```
+
+## 2. dup()和dup2()
+
+```c
+#include <unistd.h>
+
+int dup(int oldfd);
+int dup2(int oldfd, int newfd);
+```
+
+## 3. readv()和writev()
+
+```c
+#include <sys/uio.h>
+
+ssize_t readv(int fd, const struct iovec *iov, int iovcnt);
+
+ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
+```
+
+- 功能：readv将数据从文件描述符读到分散的内存块，即分散读；writev将多块分散的内存数据写到一个文件描述符，即集中写
+- 参数
+- 返回值
+
+## 4. sendfile()
+
+```c
+#include <sys/sendfile.h>
+
+ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
+```
+
+- 功能：在两个文件描述符之间直接传递数据（内核空间的数据传递），避免了内核缓冲区和用户缓冲区之间的数据拷贝，效率更高
+
+## 5. mmap()和munmap()
+
+```c
+#include <sys/mman.h>
+
+void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+int munmap(void *addr, size_t length);
+```
+
+## 6. splice()
+
+```c
+#include <fcntl.h>
+
+ssize_t splice(int fd_in, loff_t *off_in, int fd_out, loff_t *off_out, size_t len, unsigned int flags);
+```
+
+- 功能：用于在两个文件描述符之间移动数据，也是内核空间的操作
+
+## 7. tee()
+
+```c
+#include <fcntl.h>
+
+ssize_t tee(int fd_in, int fd_out, size_t len, unsigned int flags);
+```
+
+- 功能：在两个管道文件之间复制数据，也是零拷贝操作（内核空间的操作）
+
+## 8. fcntl()
+
+```c
+#include <unistd.h>
+#include <fcntl.h>
+
+int fcntl(int fd, int cmd, ... /* arg */ );
+```
+
+- 功能：操作文件描述符
+
+- 参数：
+
+  - fd：要操作的文件描述符
+  - cmd和...：操作命令和参数
+
+  <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/E8A10EC9D6364048BF6CD3F7BB6E69F2/27479" style="zoom: 67%;" />
+
+<img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/E724329B66604A19A6B463E8B95074DC/27481" style="zoom:80%;" />
+
+# 
+
 # 八、原始套接字
 
 ## 1. 简介
@@ -1031,71 +1173,3 @@ sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 ```
 
 接收使用recvfrom，发送使用
-
-# 九、其他
-
-## 1. TCP socket缓冲区大小
-
-系统版本信息：centos 7
-
-```shell
-[machun@localhost ipv4]$ cat /proc/version 
-Linux version 3.10.0-1127.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Tue Mar 31 23:36:51 UTC 2020
-```
-
-### 1.1 通过/proc查看socket缓冲区大小
-
-查看TCP发送、接收缓冲区大小
-
-```shell
-[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_wmem 
-4096	16384	4194304   // 默认值为16384
-[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_rmem 
-4096	87380	6291456   // 默认值为87380
-```
-
-### 1.2 getsockopt获取缓冲区大小
-
-通过如下代码，可以获取tcp socket读写缓冲区大小
-
-```c
-#include <sys/types.h>          /* See NOTES */
-#include <sys/socket.h>
-
-dwLen = sizeof(nRcvBufLen);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVBUF, &nRcvBufLen, &dwLen);
-
-dwLen = sizeof(nSndBufLen);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDBUF, &nSndBufLen, &dwLen);
-```
-
-运行结果如下：
-
-```
-getsockopt tcp socket SO_RCVBUF succ, nRcvBufLen:87380
-getsockopt tcp socket SO_SNDBUF succ, nSndBufLen:16384
-```
-
-可以通过setsockopt函数，设置socket发送、接收缓冲区大小，但实际生效的值，是我们设置的2倍
-
-## 2. TCP socket缓冲区低水位标志
-
-TCP socket缓冲区低水位标志，用于IO复用时，判断socket是否可读可写。当TCP socket接收缓冲区中的可读数据量大于其低水位时，IO复用接口将通知上层应用可以从socket读取数据；当TCP socket发送缓冲区中的空闲空间（可写入的空间）大于其低水位时，IO复用接口将通知上层应用可以往socket写入数据。
-
-默认情况下，TCP发送、接收缓冲区低水位标志，均为1字节
-
-```c
-dwLen = sizeof(nRcvLowFlag);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVLOWAT, &nRcvLowFlag, &dwLen); // TCP接收缓冲区低水位标志
-    
-dwLen = sizeof(nSndLowFlag);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDLOWAT, &nSndLowFlag, &dwLen); // TCP发送缓冲区低水位标志
-```
-
-打印如下
-
-```
-getsockopt tcp socket SO_RCVLOWAT succ, nRcvLowFlag:1
-getsockopt tcp socket SO_SNDLOWAT succ, nSndLowFlag:1
-```
-
