@@ -1173,3 +1173,168 @@ sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 ```
 
 接收使用recvfrom，发送使用
+
+# 九、Linux服务器程序规范
+
+## 1. 系统资源限制
+
+Linux上运行的进程，会收到系统资源的限制，比如硬件资源的限制（CPU核数、内存大小、硬盘大小等）、系统资源限制（CPU时间片等）、具体实现的限制（文件名的最大长度限制等）。可以通过下面的函数来获取、设置。	
+
+```c
+#include <sys/time.h>
+#include <sys/resource.h>
+
+/* Kinds of resource limit.  */
+enum __rlimit_resource
+{
+  /* Per-process CPU limit, in seconds.  */
+  RLIMIT_CPU = 0,
+#define RLIMIT_CPU RLIMIT_CPU
+
+  /* Largest file that can be created, in bytes.  */
+  RLIMIT_FSIZE = 1,
+#define	RLIMIT_FSIZE RLIMIT_FSIZE
+
+  /* Maximum size of data segment, in bytes.  */
+  RLIMIT_DATA = 2,
+#define	RLIMIT_DATA RLIMIT_DATA
+
+  /* Maximum size of stack segment, in bytes.  */
+  RLIMIT_STACK = 3,
+#define	RLIMIT_STACK RLIMIT_STACK
+
+  /* Largest core file that can be created, in bytes.  */
+  RLIMIT_CORE = 4,
+#define	RLIMIT_CORE RLIMIT_CORE
+
+  /* Largest resident set size, in bytes.
+     This affects swapping; processes that are exceeding their
+     resident set size will be more likely to have physical memory
+     taken from them.  */
+  __RLIMIT_RSS = 5,
+#define	RLIMIT_RSS __RLIMIT_RSS
+
+  /* Number of open files.  */
+  RLIMIT_NOFILE = 7,
+  __RLIMIT_OFILE = RLIMIT_NOFILE, /* BSD name for same.  */
+#define RLIMIT_NOFILE RLIMIT_NOFILE
+#define RLIMIT_OFILE __RLIMIT_OFILE
+
+  /* Address space limit.  */
+  RLIMIT_AS = 9,
+#define RLIMIT_AS RLIMIT_AS
+
+  /* Number of processes.  */
+  __RLIMIT_NPROC = 6,
+#define RLIMIT_NPROC __RLIMIT_NPROC
+
+  /* Locked-in-memory address space.  */
+  __RLIMIT_MEMLOCK = 8,
+#define RLIMIT_MEMLOCK __RLIMIT_MEMLOCK
+
+  /* Maximum number of file locks.  */
+  __RLIMIT_LOCKS = 10,
+#define RLIMIT_LOCKS __RLIMIT_LOCKS
+
+  /* Maximum number of pending signals.  */
+  __RLIMIT_SIGPENDING = 11,
+#define RLIMIT_SIGPENDING __RLIMIT_SIGPENDING
+
+  /* Maximum bytes in POSIX message queues.  */
+  __RLIMIT_MSGQUEUE = 12,
+#define RLIMIT_MSGQUEUE __RLIMIT_MSGQUEUE
+
+  /* Maximum nice priority allowed to raise to.
+     Nice levels 19 .. -20 correspond to 0 .. 39
+     values of this resource limit.  */
+  __RLIMIT_NICE = 13,
+#define RLIMIT_NICE __RLIMIT_NICE
+
+  /* Maximum realtime priority allowed for non-priviledged
+     processes.  */
+  __RLIMIT_RTPRIO = 14,
+#define RLIMIT_RTPRIO __RLIMIT_RTPRIO
+
+  /* Maximum CPU time in µs that a process scheduled under a real-time
+     scheduling policy may consume without making a blocking system
+     call before being forcibly descheduled.  */
+  __RLIMIT_RTTIME = 15,
+#define RLIMIT_RTTIME __RLIMIT_RTTIME
+
+  __RLIMIT_NLIMITS = 16,
+  __RLIM_NLIMITS = __RLIMIT_NLIMITS
+#define RLIMIT_NLIMITS __RLIMIT_NLIMITS
+#define RLIM_NLIMITS __RLIM_NLIMITS
+};
+
+struct rlimit
+{
+    /* The current (soft) limit.  */
+    rlim_t rlim_cur;
+    /* The hard limit.  */
+    rlim_t rlim_max;
+};
+
+int getrlimit(int resource, struct rlimit *rlim);
+int setrlimit(int resource, const struct rlimit *rlim);
+```
+
+- 功能：获取和设置系统软硬件资源限制
+- 参数
+  - resource：资源限制类型
+  - rlim：资源限制值，rlim_t是一个整形值
+- 返回值：成功返回0，失败返回-1
+
+<img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/B12C44A449BE4BA4A51B16FE984506A4/27503" style="zoom:67%;" />
+
+## 2. 获取和修改当前工作目录
+
+```c
+#include <unistd.h>
+
+char *getcwd(char *buf, size_t size);
+```
+
+- 功能：获取进程当前的工作目录
+
+- 参数：
+
+  - buf：指向保存当前工作目录的绝对路径名
+  - size：buf大小
+
+- 返回值：成功则返回指向路径存储区的指针，失败返回NULL。如果buf 非NULL，但绝对路径长度超过size大小，则返回NULL；如果buf为NULL，则函数内部会malloc一块空间，用于存放当前工作目录，并通过返回值返回，后面需要将这块内存释放。
+
+  
+
+```c
+#include <string.h>
+
+int chdir(const char *path);
+```
+
+- 功能：切换进程的工作目录
+- 参数：path为当前的工作目录
+- 返回值：成功返回0，失败返回-1
+
+# 十、高性能服务器框架
+
+## 1. 服务器模型
+
+### 1.1 C/S模型
+
+客户端、服务器模型
+
+### 1.2 P2P模型
+
+Peer To Peer，点对点模型
+
+<img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/33B4BC062953423BB0229708A4E7495C/27506" style="zoom:67%;" />
+
+## 2. 服务器框架
+
+
+
+
+
+
+
