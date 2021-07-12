@@ -705,7 +705,9 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 - 一端异常终止连接，会发送RST复位报文段
 - 往半打开状态下的一端发送数据，会返回RST复位报文段
 
-## 11. IO复用之select
+# 五、I/O复用
+
+## 1. select
 
 IO复用，只用一个进程或线程，来实现多路并发。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
 
@@ -782,9 +784,11 @@ void FD_ZERO(fd_set *set);
 
 功能：清空文件描述符
 
+## 2. poll
 
 
-## 12. IO复用之epoll
+
+## 3. epoll
 
 epoll的底层实现，是**红黑树**
 
@@ -794,7 +798,7 @@ epoll的底层实现，是**红黑树**
 - 每次重新监听，不需要重新添加文件描述符
 - 监听到文件描述符变化，会返回变化的文件描述符（不需要遍历查找变化的文件描述符）
 
-### 12.1 epoll_create
+### 3.1 epoll_create
 
 ```c
 #include <sys/epoll.h>
@@ -806,7 +810,7 @@ int epoll_create(int size);
 - 参数：epoll监听的数量，大于0即可。Since Linux 2.6.8, the size argument is ignored, but must be greater than zero
 - 返回值：成功返回epoll句柄，失败返回-1
 
-### 12.2 epoll_ctl
+### 3.2 epoll_ctl
 
 ```c
 #include <sys/epoll.h>
@@ -844,7 +848,7 @@ events：
     - data：用户数据，可以用来传递文件描述符或其他需要传递的信息
 - 返回值：成功返回0，失败返回-1
 
-### 12.3 epoll_wait
+### 3.3 epoll_wait
 
 ```c
 #include <sys/epoll.h>
@@ -860,7 +864,7 @@ int epoll_wait(int epfd, struct epoll_event *events,int maxevents, int timeout);
   - timeout：超时时间，单位ms。-1表示一直等待，0表示不阻塞
 - 返回值：变化的文件描述符个数。0表示超时时间到，没有文件描述符有事件变化；-1表示出错
 
-### 12.4 水平触发和边沿触发
+### 3.4 水平触发和边沿触发
 
 epoll_wait有两种触发方式，一个是水平触发，一个是边沿触发。
 
@@ -905,74 +909,9 @@ fcntl(fd, F_SETFL, flag);
 
 <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/249DDF72D9FC453DAA586DCA1F50FF66/26916" style="zoom:80%;" />
 
-### 12.5 epoll + 线程池
+## 4. 三种IO复用方式的比较
 
-一个线程中，while循环处理epoll_wait的事件，会有一个问题。如果某些处理比较耗时，就会导致epoll_wait处理不及时，影响其他事件的处理。一般采用 epoll + 线程池的方式来解决这个问题
 
-## 13. TCP socket缓冲区大小
-
-系统版本信息：centos 7
-
-```shell
-[machun@localhost ipv4]$ cat /proc/version 
-Linux version 3.10.0-1127.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Tue Mar 31 23:36:51 UTC 2020
-```
-
-### 13.1 通过/proc查看socket缓冲区大小
-
-查看TCP发送、接收缓冲区大小
-
-```shell
-[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_wmem 
-4096	16384	4194304   // 默认值为16384
-[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_rmem 
-4096	87380	6291456   // 默认值为87380
-```
-
-### 13.2 getsockopt获取缓冲区大小
-
-通过如下代码，可以获取tcp socket读写缓冲区大小
-
-```c
-#include <sys/types.h>          /* See NOTES */
-#include <sys/socket.h>
-
-dwLen = sizeof(nRcvBufLen);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVBUF, &nRcvBufLen, &dwLen);
-
-dwLen = sizeof(nSndBufLen);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDBUF, &nSndBufLen, &dwLen);
-```
-
-运行结果如下：
-
-```
-getsockopt tcp socket SO_RCVBUF succ, nRcvBufLen:87380
-getsockopt tcp socket SO_SNDBUF succ, nSndBufLen:16384
-```
-
-可以通过setsockopt函数，设置socket发送、接收缓冲区大小，但实际生效的值，是我们设置的2倍
-
-## 14. TCP socket缓冲区低水位标志
-
-TCP socket缓冲区低水位标志，用于IO复用时，判断socket是否可读可写。当TCP socket接收缓冲区中的可读数据量大于其低水位时，IO复用接口将通知上层应用可以从socket读取数据；当TCP socket发送缓冲区中的空闲空间（可写入的空间）大于其低水位时，IO复用接口将通知上层应用可以往socket写入数据。
-
-默认情况下，TCP发送、接收缓冲区低水位标志，均为1字节
-
-```c
-dwLen = sizeof(nRcvLowFlag);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVLOWAT, &nRcvLowFlag, &dwLen); // TCP接收缓冲区低水位标志
-    
-dwLen = sizeof(nSndLowFlag);
-nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDLOWAT, &nSndLowFlag, &dwLen); // TCP发送缓冲区低水位标志
-```
-
-打印如下
-
-```
-getsockopt tcp socket SO_RCVLOWAT succ, nRcvLowFlag:1
-getsockopt tcp socket SO_SNDLOWAT succ, nSndLowFlag:1
-```
 
 # 五、UDP协议
 
@@ -1133,47 +1072,6 @@ int fcntl(int fd, int cmd, ... /* arg */ );
 
 <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/E724329B66604A19A6B463E8B95074DC/27481" style="zoom:80%;" />
 
-# 
-
-# 八、原始套接字
-
-## 1. 简介
-
-TCP和UDP套接字，只能收发应用层数据，收到的数据不包含传输层、网络层、数据链路层的协议头。如果想要修改源、目的IP或者mac地址，TCP和UDP套接字就无能为力了。
-
-原始套接字（SOCK_RAW），可以接收数据链路层的所有数据帧，可以自己组装各种协议头。一般可以用于抓包和网络流量分析。
-
-## 2. 创建原始套接字
-
-```c
-#include <sys/socket.h>
-#include <linux/if_ether.h>
-
-int socket(PF_PACKET, SOCK_RAW, protocol);
-```
-
-- 功能：创建链路层的原始套接字
-- 参数：
-  - protocol：指定收发的数据包类型
-    - ETH_P_IP：IPv4数据包
-    - ETH_P_ARP：ARP数据包
-    - ETH_P_ALL：任何协议类型的数据包
-- 返回值：成功返回套接字fd，失败返回-1
-
-
-
-一般这样使用
-
-```c
-#include <sys/socket.h>
-#include <linux/if_ether.h>
-int sock_fd = 0;
-
-sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-```
-
-接收使用recvfrom，发送使用
-
 # 九、Linux服务器程序规范
 
 ## 1. 系统资源限制
@@ -1206,65 +1104,8 @@ enum __rlimit_resource
   /* Largest core file that can be created, in bytes.  */
   RLIMIT_CORE = 4,
 #define	RLIMIT_CORE RLIMIT_CORE
-
-  /* Largest resident set size, in bytes.
-     This affects swapping; processes that are exceeding their
-     resident set size will be more likely to have physical memory
-     taken from them.  */
-  __RLIMIT_RSS = 5,
-#define	RLIMIT_RSS __RLIMIT_RSS
-
-  /* Number of open files.  */
-  RLIMIT_NOFILE = 7,
-  __RLIMIT_OFILE = RLIMIT_NOFILE, /* BSD name for same.  */
-#define RLIMIT_NOFILE RLIMIT_NOFILE
-#define RLIMIT_OFILE __RLIMIT_OFILE
-
-  /* Address space limit.  */
-  RLIMIT_AS = 9,
-#define RLIMIT_AS RLIMIT_AS
-
-  /* Number of processes.  */
-  __RLIMIT_NPROC = 6,
-#define RLIMIT_NPROC __RLIMIT_NPROC
-
-  /* Locked-in-memory address space.  */
-  __RLIMIT_MEMLOCK = 8,
-#define RLIMIT_MEMLOCK __RLIMIT_MEMLOCK
-
-  /* Maximum number of file locks.  */
-  __RLIMIT_LOCKS = 10,
-#define RLIMIT_LOCKS __RLIMIT_LOCKS
-
-  /* Maximum number of pending signals.  */
-  __RLIMIT_SIGPENDING = 11,
-#define RLIMIT_SIGPENDING __RLIMIT_SIGPENDING
-
-  /* Maximum bytes in POSIX message queues.  */
-  __RLIMIT_MSGQUEUE = 12,
-#define RLIMIT_MSGQUEUE __RLIMIT_MSGQUEUE
-
-  /* Maximum nice priority allowed to raise to.
-     Nice levels 19 .. -20 correspond to 0 .. 39
-     values of this resource limit.  */
-  __RLIMIT_NICE = 13,
-#define RLIMIT_NICE __RLIMIT_NICE
-
-  /* Maximum realtime priority allowed for non-priviledged
-     processes.  */
-  __RLIMIT_RTPRIO = 14,
-#define RLIMIT_RTPRIO __RLIMIT_RTPRIO
-
-  /* Maximum CPU time in µs that a process scheduled under a real-time
-     scheduling policy may consume without making a blocking system
-     call before being forcibly descheduled.  */
-  __RLIMIT_RTTIME = 15,
-#define RLIMIT_RTTIME __RLIMIT_RTTIME
-
-  __RLIMIT_NLIMITS = 16,
-  __RLIM_NLIMITS = __RLIMIT_NLIMITS
-#define RLIMIT_NLIMITS __RLIMIT_NLIMITS
-#define RLIM_NLIMITS __RLIM_NLIMITS
+    
+ /* 这里只列举一部分，其他的见头文件*/
 };
 
 struct rlimit
@@ -1332,7 +1173,119 @@ Peer To Peer，点对点模型
 
 ## 2. 服务器框架
 
+# 信号
 
+
+
+
+
+
+
+# 其他
+
+## 1. TCP socket缓冲区大小
+
+系统版本信息：centos 7
+
+```shell
+[machun@localhost ipv4]$ cat /proc/version 
+Linux version 3.10.0-1127.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-39) (GCC) ) #1 SMP Tue Mar 31 23:36:51 UTC 2020
+```
+
+### 1.1 通过/proc查看socket缓冲区大小
+
+查看TCP发送、接收缓冲区大小
+
+```shell
+[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_wmem 
+4096	16384	4194304   // 默认值为16384
+[machun@localhost ipv4]$ cat /proc/sys/net/ipv4/tcp_rmem 
+4096	87380	6291456   // 默认值为87380
+```
+
+### 1.2 getsockopt获取缓冲区大小
+
+通过如下代码，可以获取tcp socket读写缓冲区大小
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+dwLen = sizeof(nRcvBufLen);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVBUF, &nRcvBufLen, &dwLen);
+
+dwLen = sizeof(nSndBufLen);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDBUF, &nSndBufLen, &dwLen);
+```
+
+运行结果如下：
+
+```
+getsockopt tcp socket SO_RCVBUF succ, nRcvBufLen:87380
+getsockopt tcp socket SO_SNDBUF succ, nSndBufLen:16384
+```
+
+可以通过setsockopt函数，设置socket发送、接收缓冲区大小，但实际生效的值，是我们设置的2倍
+
+## 2. TCP socket缓冲区低水位标志
+
+TCP socket缓冲区低水位标志，用于IO复用时，判断socket是否可读可写。当TCP socket接收缓冲区中的可读数据量大于其低水位时，IO复用接口将通知上层应用可以从socket读取数据；当TCP socket发送缓冲区中的空闲空间（可写入的空间）大于其低水位时，IO复用接口将通知上层应用可以往socket写入数据。
+
+默认情况下，TCP发送、接收缓冲区低水位标志，均为1字节
+
+```c
+dwLen = sizeof(nRcvLowFlag);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_RCVLOWAT, &nRcvLowFlag, &dwLen); // TCP接收缓冲区低水位标志
+    
+dwLen = sizeof(nSndLowFlag);
+nRet = getsockopt(nTcpSockFd, SOL_SOCKET, SO_SNDLOWAT, &nSndLowFlag, &dwLen); // TCP发送缓冲区低水位标志
+```
+
+打印如下
+
+```
+getsockopt tcp socket SO_RCVLOWAT succ, nRcvLowFlag:1
+getsockopt tcp socket SO_SNDLOWAT succ, nSndLowFlag:1
+```
+
+# 原始套接字
+
+## 1. 简介
+
+TCP和UDP套接字，只能收发应用层数据，收到的数据不包含传输层、网络层、数据链路层的协议头。如果想要修改源、目的IP或者mac地址，TCP和UDP套接字就无能为力了。
+
+原始套接字（SOCK_RAW），可以接收数据链路层的所有数据帧，可以自己组装各种协议头。一般可以用于抓包和网络流量分析。
+
+## 2. 创建原始套接字
+
+```c
+#include <sys/socket.h>
+#include <linux/if_ether.h>
+
+int socket(PF_PACKET, SOCK_RAW, protocol);
+```
+
+- 功能：创建链路层的原始套接字
+- 参数：
+  - protocol：指定收发的数据包类型
+    - ETH_P_IP：IPv4数据包
+    - ETH_P_ARP：ARP数据包
+    - ETH_P_ALL：任何协议类型的数据包
+- 返回值：成功返回套接字fd，失败返回-1
+
+
+
+一般这样使用
+
+```c
+#include <sys/socket.h>
+#include <linux/if_ether.h>
+int sock_fd = 0;
+
+sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+```
+
+接收使用recvfrom，发送使用
 
 
 
