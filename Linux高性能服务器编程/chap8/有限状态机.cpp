@@ -104,7 +104,7 @@ LINE_STATUS parse_line(char *buffer, int &checked_index, int &read_index)
 }
 
 // 分析请求行
-HTTP_CODE parse_requestline(char *temp, CHECK_STATE &ckeckstate)
+HTTP_CODE parse_requestline(char *temp, CHECK_STATE &checkstate)
 {
     // 如果请求行中没有空白字符或'\t'字符，则HTTP请求必有问题
     char *url = strpbrk(temp, "\t");
@@ -142,7 +142,7 @@ HTTP_CODE parse_requestline(char *temp, CHECK_STATE &ckeckstate)
     }
 
     // 检查URL是否合法
-    if (strcasecmp(url, "http://", 7) == 0)
+    if (strncasecmp(url, "http://", 7) == 0)
     {
         url += 7;
         url = strchr(url, '/');
@@ -184,7 +184,7 @@ HTTP_CODE parse_headers(char *temp)
 
 // 分析HTTP请求的入口函数
 HTTP_CODE parse_content(char *buffer, int& checked_index, CHECK_STATE&
-                        chackstate, int &read_index, int &start_line)
+                        checkstate, int &read_index, int &start_line)
 {
     LINE_STATUS linestatus = LINE_OK;
     HTTP_CODE retcode = NO_REQUEST;
@@ -193,14 +193,14 @@ HTTP_CODE parse_content(char *buffer, int& checked_index, CHECK_STATE&
     while((linestatus = parse_line(buffer, checked_index, read_index)) == LINE_OK)
     {
         char *temp = buffer + start_line;
-        start_line = chacked_index;
+        start_line = checked_index;
         
         // checkstate记录主状态机当前的状态
         switch (checkstate)
         {
             case CHECK_STATE_REQUEST_LINE:
             {
-                retcode = parse_requestline(temp, checkstate)
+                retcode = parse_requestline(temp, checkstate);
                 if (retcode == BAD_REQUEST)
                 {
                     return BAD_REQUEST;
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     address.sin_port = htons(port);
 
     int listenfd = socket(PF_INET, SOCK_STREAM, 0);
-    assert(listenfd >= 0)
+    assert(listenfd >= 0);
 
     int ret = bind(listenfd, (struct sockaddr*)&address, sizeof(address));
     assert(ret != -1);
