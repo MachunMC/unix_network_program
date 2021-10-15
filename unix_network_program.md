@@ -9,7 +9,7 @@
 - [ ] TCP有发送接收缓冲区，UDP有吗？
 
 
-# 一、编程基础
+# 编程基础
 
 ## 1. 网络开发模型
 
@@ -33,9 +33,8 @@ TCP和UDP属于传输层协议，IP为网络层协议
 
 - 具有超时重传、拥塞控制等机制，可以保证数据的可靠传输
 
-  
 
-**UDP 用户数据报协议**
+**UDP，用户数据报协议**
 
 特点：
 
@@ -101,7 +100,7 @@ uint16_t ntohs(uint16_t netshort);
 int inet_pton(int af, const char *src, void *dst);
 ```
 
-- 功能：将 ipv4地址的字符串形式，转换为32位的整数，转换后的整数网络序；或者将ipv6地址的字符串形式，转换为128位的整数
+- 功能：将 ipv4地址的字符串形式，转换为32位的整数，转换后的整数为网络序；或者将ipv6地址的字符串形式，转换为128位的整数
 - 参数：
   - af：协议族，ipv4 为 AF_INET，ipv6 为 AF_INET6
   - src：需要转换的字符串的首地址
@@ -124,9 +123,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 
 ## 6. socket
 
-socket为了解决不同主机上的进程间通信
-
-socket必须成对出现
+socket为了解决不同主机上的进程间通信问题，必须成对出现
 
 ## 7. 地址结构体
 
@@ -167,9 +164,11 @@ struct in_addr
 https://blog.csdn.net/euyy1029/article/details/107708365utm_medium=distribute.pc_releant.none-task-blog-baidulandingword-1&spm=1001.2101.3001.4242 
 ```
 
+# UDP协议
 
+数据报套接字
 
-# 二、UDP编程基础
+# UDP编程基础
 
 ## 1. C/S架构模型
 
@@ -183,12 +182,9 @@ https://blog.csdn.net/euyy1029/article/details/107708365utm_medium=distribute.pc
 
 - 客户端无需绑定本地IP和端口，需要指定服务端IP和端口，客户端发送时，本地端口由系统随机分配
 
+## 2. socket()
 
-## 2. 函数说明
-
-### 2.1 socket()
-
-```
+```C
 #include <sys/socket.h>
 
 int socket(int domain, int type, int protocol);
@@ -209,7 +205,7 @@ int socket(int domain, int type, int protocol);
 
 **注意**：创建socket的时候，系统会为该socket分配两块缓冲区，一个用于读，一个用于写
 
-### 2.2 bind()
+## 3. bind()
 
 ```
 #include <sys/socket.h>
@@ -220,13 +216,13 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 - 功能：给socket 绑定IP和端口
 - 参数：
   - sockfd：绑定的socket
-  - addr：绑定的IP和端口。IP和端口为网络序，并需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体
+  - addr：绑定的IP和端口。**IP和端口都是网络序，并需要将ipv4 / ipv6 套接字结构体转成通用套接字结构体**
   - addrlen：ipv4 / ipv6 地址长度（字节数）
 - 返回值：成功返回0；失败返回-1，并设置errno
 
-### 2.3 sendto()
+## 4. sendto()
 
-```
+```c
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -254,10 +250,9 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
 
 - 返回值：成功返回发送的字节数，失败返回-1，并设置errno
 
+## 5. recvfrom()
 
-### 2.4 recvfrom()
-
-```
+```c
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -265,7 +260,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
                  struct sockaddr *src_addr, socklen_t *addrlen);
 ```
 
-- 功能：从socket 接收数据。如果接收的数据过长，Buf 不够，数据可能会被丢弃；如果没有消息可以接收，recvfrom会阻塞，除非该socket设置的非阻塞，那么此时会返回-1，并设置errno为EAGAIN 或 EWOULDBLOCK
+- 功能：从socket 接收数据。如果接收的数据过长，Buf 不够，数据可能会被丢弃；如果没有消息可以接收，**recvfrom会阻塞，除非该socket设置的非阻塞**，那么此时会返回-1，并设置errno为EAGAIN 或 EWOULDBLOCK
 
 - 参数：
   - sockfd：接收数据的sokcet
@@ -284,219 +279,18 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 
 - 返回值：成功返回接收到的字节数，失败返回 -1，并设置errno。如果为流式套接字，对端关闭时返回0；如果要接收的字节数为0，同样也会返回0
 
-## 3. UDP协议格式
-
-
-
-# 三、TCP编程基础
-
-## 1. C/S架构模型
-
-**注意**：下图中的connect到accept这条线画的不对，connect箭头应该指向listen下面
-
-![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/FEDD4F54F61241939FE05E700F0E3CEA/19661)
-
-
-
-## 2. TCP服务器处理流程
-
-![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/2F9E23982F6246399D5FD9F57D5C8981/24731)
-
-- 监听套接字：只负责和客户端建立连接，不进行数据通信
-- 已连接套接字：和客户端进行数据通信
-
-## 3. 函数说明
-
-### 3.1 connect()
-
-```c
-#include <sys/socket.h>
-
-int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-```
-
-- 功能：连接指定地址的服务器（通常，面向连接的socket只能使用一次，面向无连接的socket可以连接多次）
-- 参数：
-  - sockfd：创建的socket
-  - addr：要连接的服务器地址
-  - addrlen：服务器地址长度
-- 返回值：成功返回0，失败返回-1，并设置errno
-
-### 3.2 send()
-
-```c
-#include <sys/types.h>
-#include <sys/socket.h>
-
-ssize_t send(int sockfd, const void *buf, size_t len, int flags);
-```
-
-- 功能：发送数据到已连接的对端socket
-- 参数
-  - sockfd：已连接的socket
-
-  - buf：要发送的数据Buffer
-
-  - len：要发送的数据长度
-
-  - flags：一般为0，可使用以下参数，具体用法参考man手册
-
-    ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/18B617F1A03340C38F09141454D848D1/27317)
-- 返回值：成功返回已发送的字节数，失败返回-1，并设置errno
-
-### 3.3 recv()
-
-```
-#include <sys/types.h>
-#include <sys/socket.h>
-
-ssize_t recv(int sockfd, void *buf, size_t len, int flags);
-```
-
-- 功能：从已连接的socket中接收数据，默认阻塞，除非socket设置为非阻塞
-- 参数 
-  - sockfd：已连接的socket
-  - buf：接收数据的地址
-  - len：接收Buff的长度
-  - flags：一般为0，具体用法参考man手册（同send）
-- 返回值：成功返回接收的字节数，失败返回-1，并设置errno。如果socket设置为非阻塞，没有收到消息，recv会返回-1，并设置errno为 EAGAIN or EWOULDBLOCK；如果对端关闭，会返回0
-
-```
-recv() 等价于 recvfrom(fd, buf, len, flags, NULL, 0);
-```
-
-### 3.4 listen(）
-
-​		**监听的时候，套接字会由主动变成被动，同时会创建两个队列，一个是已完成连接队列，一个是未完成连接队列。当客户端connect连接过来，先加入到未完成连接队列，当三次握手完成后，会加入到已完成连接队列。**
-
-```c
-#include <sys/types.h>          
-#include <sys/socket.h>
-
-int listen(int sockfd, int backlog);
-```
-
-- 功能：将套接字由主动变为被动，并创建两个连接队列（已完成连接队列和未完成连接队列）
-- 参数：
-  - sockfd：
-  - backlog：两个队列长度总和的最大值，现在一般为128
-- 返回值：成功返回0，失败返回-1，并设置error
-
-### 3.5 accept()
-
-```c
-#include <sys/types.h>    
-#include <sys/socket.h>
-
-int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-```
-
-- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。**默认是阻塞的**
-- 参数：
-
-  - sockfd：监听套接字
-  - addr：保存客户端地址的结构体
-  - addrlen：结构体长度
-- 返回值：成功返回已连接套接字，失败返回-1
-
-### 3.6 close()
-
-```c
-#include <unistd.h>
-
-int close(int fd);
-```
-
-- 功能：关闭文件描述符。close并非总是立即关闭一个连接，而是将fd的引用计数减1，当fd的引用计数为0时，才会关闭连接
-- 参数：需要关闭的文件描述符
-- 返回值：成功返回0，失败返回-1
-
-### 3.7 shutdown()
-
-```c
-#include <sys/socket.h>
-
-int shutdown(int sockfd, int how);
-```
-
-- 功能：立即关闭连接。相对于close，shutdown是专门为网络编程设计的
-- 参数：
-  - sockfd：需要关闭的socket fd
-  - how
-    - SHUT_RD：关闭socket上的读功能。上层应用无法对该socket执行读操作，并且socket接收缓冲区中的数据会被丢弃
-    - SHUT_WR：关于socket上的写功能。socket发送缓冲区中的数据，会在连接关闭前全部发送出去，上层应用无法对该socket执行写操作。这种状态下，连接处于半关闭状态
-    - SHUT_RDWR：关闭socket上的读写功能
-- 返回值：成功返回0，失败返回
-
-### 3.8 getsockname()
-
-```c
-#include <sys/socket.h>
-
-int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-```
-
-- 功能：获取socket对应本地的ip和端口信息
-- 参数：
-- 返回值：成功返回0，失败返回-1
-
-### 3.9 getpeername()
-
-```c
-#include <sys/socket.h>
-
-int getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-```
-
-- 功能：获取socket对应的对端的ip和端口信息
-- 参数：
-- 返回值：成功返回0，失败返回-1
-
-### 3.10 getsockopt()
-
-```c
-#include <sys/types.h>          /* See NOTES */
-#include <sys/socket.h>
-
-int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
-```
-
-- 功能：获取socket选项
-- 参数：
-  - sockfd：要设置的socket fd
-  - level：指定要操作哪个协议的选项
-  - optname：指定选项的名字
-  - optval：保存选项的值
-  - optlen：选项的长度
-- 返回值：成功返回0，失败返回-1
-
-![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/7898B29AF69A4160BF2779A99C670685/27334)
-
-### 3.11 setsockopt()
-
-```c
-#include <sys/types.h>          /* See NOTES */
-#include <sys/socket.h>
-
-int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
-```
-
-- 功能：设置socket选项
-- 参数：同上
-- 返回值：成功返回0，失败返回-1
-
-# 四、TCP协议
+# TCP协议
 
 ## 1. 简介
 
-​		**TCP提供一种面向连接的、可靠的、字节流的服务**。通信双方需要先建立连接，才能交换数据。TCP仅适用于双方通信，多播和广播不能用TCP。
+​		**TCP提供一种面向连接的、可靠的、字节流的服务**。通信双方需要先建立连接，才能交换数据。TCP仅适用于双方通信，不能用于多播和广播。
 
 ​		TCP通过下列方式提供可靠性。
 
 - 数据被切割成TCP认为最合适发送的数据段
 - 当发送一个TCP报文段后，发送端会启动一个定时器，等待对端确认接收到该报文段。如果没有及时收到确认，会重发该报文段
 - 当接收端收到对端的TCP报文段后，会发送一个确认（ACK）。**一般会推迟几分之一秒发送，不知道为啥？**
-- 首部和数据校验和，检测数据在传输过程中没有出现差错。有错误就不确认，等待对端重传
+- 首部和数据校验和，检测数据在传输过程中没有出现差错。有错误就不确认，等待对端超时重传
 - IP数据报不保证顺序，TCP会对收到的数据进行排序，将收到的数据按照正确的顺序给到应用层。
 - TCP会丢弃重复的数据
 - TCP提供流量控制
@@ -554,9 +348,9 @@ TCP固定包头是20个字节（不加选项）
  - 二者都是随机值，wireshark显示Seq从0开始，实际上是经过处理的，可以看到下面有一个Sequence Number (raw)
  - **序列号**表示当前这个包的序号
  - **确认序列号**
-    - 用于确认收到对方的报文
-    - 希望下一次对方报文的序列号为我的确认序列号，这样可以确认对端收到了我的这条报文
-    - 确认序列号 = 收到对方的报文（序号 + SYN标志 ( 0 / 1 ) + 报文数据的长度）
+   - 用于确认收到对方的报文
+   - 希望下一次对方报文的序列号为我的确认序列号，这样可以确认对端收到了我的这条报文
+   - 确认序列号 = 收到对方的报文（序号 + SYN标志 ( 0 / 1 ) + 报文数据的长度）
 
 
 
@@ -705,7 +499,202 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 - 一端异常终止连接，会发送RST复位报文段
 - 往半打开状态下的一端发送数据，会返回RST复位报文段
 
-# 五、I/O复用
+# TCP编程基础
+
+## 1. C/S架构模型
+
+**注意**：下图中的connect到accept这条线画的不对，connect箭头应该指向listen下面
+
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/FEDD4F54F61241939FE05E700F0E3CEA/19661)
+
+
+
+## 2. TCP服务器处理流程
+
+![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/2F9E23982F6246399D5FD9F57D5C8981/24731)
+
+- 监听套接字：只负责和客户端建立连接，不进行数据通信
+- 已连接套接字：和客户端进行数据通信
+
+## 3. connect()
+
+```c
+#include <sys/socket.h>
+
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+- 功能：连接指定地址的服务器（通常，面向连接的socket只能使用一次，面向无连接的socket可以连接多次）
+- 参数：
+  - sockfd：创建的socket
+  - addr：要连接的服务器地址
+  - addrlen：服务器地址长度
+- 返回值：成功返回0，失败返回-1，并设置errno
+
+## 4. send()
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+```
+
+- 功能：发送数据到已连接的对端socket
+- 参数
+  - sockfd：已连接的socket
+
+  - buf：要发送的数据Buffer
+
+  - len：要发送的数据长度
+
+  - flags：一般为0，可使用以下参数，具体用法参考man手册
+
+    ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/18B617F1A03340C38F09141454D848D1/27317)
+- 返回值：成功返回已发送的字节数，失败返回-1，并设置errno
+
+## 5. recv()
+
+```
+#include <sys/types.h>
+#include <sys/socket.h>
+
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+```
+
+- 功能：从已连接的socket中接收数据，默认阻塞，除非socket设置为非阻塞
+- 参数 
+  - sockfd：已连接的socket
+  - buf：接收数据的地址
+  - len：接收Buff的长度
+  - flags：一般为0，具体用法参考man手册（同send）
+- 返回值：成功返回接收的字节数，失败返回-1，并设置errno。如果socket设置为非阻塞，没有收到消息，recv会返回-1，并设置errno为 EAGAIN or EWOULDBLOCK；如果对端关闭，会返回0
+
+```
+recv() 等价于 recvfrom(fd, buf, len, flags, NULL, 0);
+```
+
+## 6. listen(）
+
+​		**监听的时候，套接字会由主动变成被动，同时会创建两个队列，一个是已完成连接队列，一个是未完成连接队列。当客户端connect连接过来，先加入到未完成连接队列，当三次握手完成后，会加入到已完成连接队列。**
+
+```c
+#include <sys/types.h>          
+#include <sys/socket.h>
+
+int listen(int sockfd, int backlog);
+```
+
+- 功能：将套接字由主动变为被动，并创建两个连接队列（已完成连接队列和未完成连接队列）
+- 参数：
+  - sockfd：
+  - backlog：两个队列长度总和的最大值，现在一般为128
+- 返回值：成功返回0，失败返回-1，并设置error
+
+## 7. accept()
+
+```c
+#include <sys/types.h>    
+#include <sys/socket.h>
+
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。**默认是阻塞的**
+- 参数：
+
+  - sockfd：监听套接字
+  - addr：保存客户端地址的结构体
+  - addrlen：结构体长度
+- 返回值：成功返回已连接套接字，失败返回-1
+
+## 8. close()
+
+```c
+#include <unistd.h>
+
+int close(int fd);
+```
+
+- 功能：关闭文件描述符。close并非总是立即关闭一个连接，而是将fd的引用计数减1，当fd的引用计数为0时，才会关闭连接
+- 参数：需要关闭的文件描述符
+- 返回值：成功返回0，失败返回-1
+
+## 9. shutdown()
+
+```c
+#include <sys/socket.h>
+
+int shutdown(int sockfd, int how);
+```
+
+- 功能：立即关闭连接。相对于close，shutdown是专门为网络编程设计的
+- 参数：
+  - sockfd：需要关闭的socket fd
+  - how
+    - SHUT_RD：关闭socket上的读功能。上层应用无法对该socket执行读操作，并且socket接收缓冲区中的数据会被丢弃
+    - SHUT_WR：关于socket上的写功能。socket发送缓冲区中的数据，会在连接关闭前全部发送出去，上层应用无法对该socket执行写操作。这种状态下，连接处于半关闭状态
+    - SHUT_RDWR：关闭socket上的读写功能
+- 返回值：成功返回0，失败返回
+
+## 10. getsockname()
+
+```c
+#include <sys/socket.h>
+
+int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+- 功能：获取socket对应本地的ip和端口信息
+- 参数：
+- 返回值：成功返回0，失败返回-1
+
+## 11. getpeername()
+
+```c
+#include <sys/socket.h>
+
+int getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+- 功能：获取socket对应的对端的ip和端口信息
+- 参数：
+- 返回值：成功返回0，失败返回-1
+
+## 12. getsockopt()
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+```
+
+- 功能：获取socket选项
+- 参数：
+  - sockfd：要设置的socket fd
+  - level：指定要操作哪个协议的选项
+  - optname：指定选项的名字
+  - optval：保存选项的值
+  - optlen：选项的长度
+- 返回值：成功返回0，失败返回-1
+
+![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/7898B29AF69A4160BF2779A99C670685/27334)
+
+## 13. setsockopt()
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+```
+
+- 功能：设置socket选项
+- 参数：同上
+- 返回值：成功返回0，失败返回-1
+
+# I/O复用
 
 ## 1. select
 
@@ -911,13 +900,7 @@ fcntl(fd, F_SETFL, flag);
 
 ## 4. 三种IO复用方式的比较
 
-
-
-# 五、UDP协议
-
-数据报套接字
-
-# 六、IP协议
+# IP协议
 
 ## 1. 简介
 
@@ -965,7 +948,7 @@ IP层根据路由表，来决定数据如何转发。
 
 ## 5. IP层收到数据后如何处理？
 
-# 七、高级IO函数
+# 高级IO函数
 
 ## 1. pipe()
 
@@ -1072,7 +1055,7 @@ int fcntl(int fd, int cmd, ... /* arg */ );
 
 <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/E724329B66604A19A6B463E8B95074DC/27481" style="zoom:80%;" />
 
-# 九、Linux服务器程序规范
+# Linux服务器程序规范
 
 ## 1. 系统资源限制
 
@@ -1157,7 +1140,7 @@ int chdir(const char *path);
 - 参数：path为当前的工作目录
 - 返回值：成功返回0，失败返回-1
 
-# 十、高性能服务器框架
+# 高性能服务器框架
 
 ## 1. 服务器模型
 
@@ -1268,8 +1251,6 @@ int socket(PF_PACKET, SOCK_RAW, protocol);
     - ETH_P_ARP：ARP数据包
     - ETH_P_ALL：任何协议类型的数据包
 - 返回值：成功返回套接字fd，失败返回-1
-
-
 
 一般这样使用
 
