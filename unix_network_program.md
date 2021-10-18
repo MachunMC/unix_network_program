@@ -2,11 +2,8 @@
 
 - [千峰物联网学科linux网络编程_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1RJ411B761?p=1)
 - 《Linux高性能网络编程》
-- 
 
 # 疑问
-
-- [ ] TCP有发送接收缓冲区，UDP有吗？
 
 
 # 编程基础
@@ -283,9 +280,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 
 ## 1. 简介
 
-​		**TCP提供一种面向连接的、可靠的、字节流的服务**。通信双方需要先建立连接，才能交换数据。TCP仅适用于双方通信，不能用于多播和广播。
-
-​		TCP通过下列方式提供可靠性。
+TCP通过下列方式提供可靠性：
 
 - 数据被切割成TCP认为最合适发送的数据段
 - 当发送一个TCP报文段后，发送端会启动一个定时器，等待对端确认接收到该报文段。如果没有及时收到确认，会重发该报文段
@@ -299,11 +294,11 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 
 如何理解TCP提供**字节流**的服务？
 
-​		发送端连续多次执行发送操作时，这些数据会先放到TCP发送缓冲区中。当TCP协议栈真正开始发送数据时，发送缓冲区中等待发送的数据，会被封装成一个或多个TCP报文段发出。所以，TCP协议栈发送的TCP报文段数量，和应用程序执行的发送操作数量不一定是一一对应的关系。
+​		发送端连续多次执行发送操作时，这些数据会先放到TCP发送缓冲区中。当TCP协议栈真正开始发送数据时，发送缓冲区中等待发送的数据，会被封装成一个或多个TCP报文段发出。所以，TCP协议栈发送的报文段数量，和应用程序执行的发送操作数量不一定是一一对应的。
 
-​		接收端协议栈收到一个或多个TCP报文段后，将应用程序数据按照TCP报文段的序号，依次放到TCP接收缓冲区中，然后通知上层应用来读数据。上层应用可以一次将缓冲区的数据全部读完，也可分多次读取，这取决于上层应用接收缓冲区的大小。所以，应用程序执行的读操作次数，和TCP协议栈收到的报文段个数也不一定是一一对应的关系。
+​		接收端协议栈收到一个或多个TCP报文段后，将应用层数据按照TCP报文段的序号，依次放到TCP接收缓冲区中，然后通知上层应用来读数据。上层应用可以一次将缓冲区的数据全部读完，也可分多次读取，这取决于上层应用接收缓冲区的大小。所以，应用程序执行的读操作次数，和TCP协议栈收到的报文段个数也不一定是一一对应的关系。
 
-​		综上所述，发送端执行的写操作次数，和接收端执行的读操作次数，没有任何数量对应你关系。也就是说，应用程序对数据的发送和接收没有边界限制。
+​		综上所述，发送端执行的写操作次数，和接收端执行的读操作次数，没有任何数量对应关系。也就是说，应用程序对数据的发送和接收没有边界限制。
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/A798D9D6A0BA400FB56C7DAFE38180BE/27214)
 
@@ -339,7 +334,7 @@ TCP固定包头是20个字节（不加选项）
 - 校验和（16位）：用于校验整个TCP报文段在传输过程中有没有出现异常。由发送端计算，接收端校验
 - 紧急指针（16位）：URG标志位置1时有效
 - 选项：可选
-- 数据：可选。一个TCP报文段可以只包括TCP首部，TCP建立连接和终止连接过程中交换的报文段，只包含TCP首部
+- 数据：可选。一个TCP报文段可以只包括TCP首部，例如，TCP建立连接和终止连接的过程
 
 
 
@@ -349,14 +344,10 @@ TCP固定包头是20个字节（不加选项）
  - **序列号**表示当前这个包的序号
  - **确认序列号**
    - 用于确认收到对方的报文
-   - 希望下一次对方报文的序列号为我的确认序列号，这样可以确认对端收到了我的这条报文
+   - 表示希望下次对方报文的序列号为我的确认序列号，这样可以确认对端收到了我的这条报文
    - 确认序列号 = 收到对方的报文（序号 + SYN标志 ( 0 / 1 ) + 报文数据的长度）
 
-
-
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/8B40BD02E5E34D2E872EAD861687DF84/26773)
-
-
 
 ## 3. 三次握手
 
@@ -376,7 +367,7 @@ TCP固定包头是20个字节（不加选项）
 
 **第二次握手**
 
-服务端也请求和客户端建立连接，所以也会发送一个SYN请求。同时，服务端会回复客户端的SYN，所以同时会回复一个ACK
+服务端回复ACK，表示确认收到客户端的SYN连接请求；同时，服务端也会发送一个SYN，请求和客户端建立连接
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/EC2962BFC6A8431FACB4E3903A566AD0/26769)
 
@@ -384,7 +375,7 @@ TCP固定包头是20个字节（不加选项）
 
 **第三次握手**
 
-客户端对服务端的SYN进行回复，回复一个ACK
+客户端回复ACK，表示确认收到服务端的SYN
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/E65D363AE8184492B2CEBCB6491366AA/26771)
 
@@ -392,20 +383,16 @@ TCP固定包头是20个字节（不加选项）
 
 **TCP握手为什么是三次？两次行不行？**
 
-答：不行，因为第二次握手时，server也向client发起了连接请求，server需要明确client收到了请求，所以需要第三条信令，让server知道client收到了请求，并且准备好了。
-
-​		如果只有两次握手，如果第二条信令丢失，则server 认为握手已经完成，而client则因为没有收到server的确认，认为握手失败，就导致两边的状态不一致。
-
-
+答：不行，因为第二次握手时，server也向client发起了连接请求，server需要明确client收到了请求，所以需要第三条信令，让server知道client收到了请求，并且准备好了。如果只有两次握手，如果第二条信令丢失，则server 认为握手已经完成，而client则因为没有收到server的确认，认为握手失败，会导致两边状态不一致。
 
 ## 4. 四次挥手
 
-- 四次挥手发生在，客户端主动调用close关闭连接（**当然也有可能是服务端主动关闭连接**）
+**下面以客户端主动断开连接为例进行说明，实际上客户端和服务端都可以主动断开连接**
+
+- 四次挥手发生在客户端主动调用close关闭连接
 - 客户端调用close，服务端会收到长度为0的数据，表示对端请求断开连接，此时服务端也应该调用close断开连接
 - 抓包有时候会看到，服务器的ACK和FIN是一起发过去的，这是因为TCP有一个原则是，尽可能携带更多数据，此时四次挥手就变成了三次挥手
-- 客户端调用close后，协议栈并没有关闭，还在等待对方的确认。当收到对方的FIN，并回复ACK后，协议栈并不会立即关闭，还会等待一段时间，因为回复的ACK中途可能丢了，然后服务器收不到确认还会重传。客户端等待的时间为2MSL，谁先主动关闭，谁就需要等待
-
-
+- 客户端调用close后，协议栈并没有关闭，还在等待对方的确认。当收到对方的FIN，并回复ACK后，协议栈也不会立即关闭，还会等待一段时间，因为回复的ACK中途可能丢了，然后服务器收不到确认还会重传。客户端等待的时间为2MSL，谁先主动关闭，谁就需要等待
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/B3486701C9BC4984B7D5E91574772CE2/26777)
 
@@ -413,7 +400,7 @@ TCP固定包头是20个字节（不加选项）
 
 **第一次挥手**
 
-客户端主动调用close，协议栈会发送一个标志位为FIN的数据包，请求断开连接
+客户端主动调用close，协议栈会发送一个FIN，请求断开连接
 
 **第二次挥手**
 
@@ -427,20 +414,12 @@ TCP固定包头是20个字节（不加选项）
 
 客户端协议栈收到FIN请求，会回复ACK
 
-
-
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/9C684C883F3B4DB2913F42DDEE1769A5/26779)
 
-
-
 - 这里第二次挥手和第三次挥手，合并成一次了，所以抓包显示3条
-- 第一条除了FIN，还有一个ACK，ACK可能是上次请求的回复，合并到一起
-
-
+- 第一条除了FIN，还有一个ACK，ACK可能是上次请求的回复，合并到一起了
 
 ## 5. TCP状态转换图
-
-要求能够了解三次握手和四次挥手，对应的状态及转换
 
 ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/7C23447128E24529B5C7A566B71F120E/27218)
 
@@ -503,7 +482,7 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
 ## 1. C/S架构模型
 
-**注意**：下图中的connect到accept这条线画的不对，connect箭头应该指向listen下面
+**注意：下图中的connect到accept这条线画的不对，connect箭头应该指向listen下面**
 
 ![](https://note.youdao.com/yws/public/resource/620d2b0bad50ad1582add83f6580470a/xmlnote/FEDD4F54F61241939FE05E700F0E3CEA/19661)
 
@@ -516,7 +495,24 @@ setsockopt(nsockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 - 监听套接字：只负责和客户端建立连接，不进行数据通信
 - 已连接套接字：和客户端进行数据通信
 
-## 3. connect()
+## 3. listen(）
+
+​		**监听的时候，套接字会由主动变成被动，同时会创建两个队列，一个是已完成连接队列，一个是未完成连接队列。当客户端connect连接过来，先加入到未完成连接队列，当三次握手完成后，会加入到已完成连接队列。**
+
+```c
+#include <sys/types.h>          
+#include <sys/socket.h>
+
+int listen(int sockfd, int backlog);
+```
+
+- 功能：将套接字由主动变为被动，并创建两个连接队列（已完成连接队列和未完成连接队列）
+- 参数：
+  - sockfd：
+  - backlog：两个队列长度总和的最大值，现在一般为128
+- 返回值：成功返回0，失败返回-1，并设置error
+
+## 4. connect()
 
 ```c
 #include <sys/socket.h>
@@ -531,7 +527,24 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
   - addrlen：服务器地址长度
 - 返回值：成功返回0，失败返回-1，并设置errno
 
-## 4. send()
+## 5. accept()
+
+```c
+#include <sys/types.h>    
+#include <sys/socket.h>
+
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。**默认是阻塞的**
+- 参数：
+
+  - sockfd：监听套接字
+  - addr：保存客户端地址的结构体
+  - addrlen：结构体长度
+- 返回值：成功返回已连接套接字，失败返回-1
+
+## 6. send()
 
 ```c
 #include <sys/types.h>
@@ -553,7 +566,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags);
     ![](https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/18B617F1A03340C38F09141454D848D1/27317)
 - 返回值：成功返回已发送的字节数，失败返回-1，并设置errno
 
-## 5. recv()
+## 7. recv()
 
 ```
 #include <sys/types.h>
@@ -573,40 +586,6 @@ ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 ```
 recv() 等价于 recvfrom(fd, buf, len, flags, NULL, 0);
 ```
-
-## 6. listen(）
-
-​		**监听的时候，套接字会由主动变成被动，同时会创建两个队列，一个是已完成连接队列，一个是未完成连接队列。当客户端connect连接过来，先加入到未完成连接队列，当三次握手完成后，会加入到已完成连接队列。**
-
-```c
-#include <sys/types.h>          
-#include <sys/socket.h>
-
-int listen(int sockfd, int backlog);
-```
-
-- 功能：将套接字由主动变为被动，并创建两个连接队列（已完成连接队列和未完成连接队列）
-- 参数：
-  - sockfd：
-  - backlog：两个队列长度总和的最大值，现在一般为128
-- 返回值：成功返回0，失败返回-1，并设置error
-
-## 7. accept()
-
-```c
-#include <sys/types.h>    
-#include <sys/socket.h>
-
-int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-```
-
-- 功能：从已完成连接队列中，提取新的连接。同时创建一个已连接套接字，和当前这个客户端进行通信。**默认是阻塞的**
-- 参数：
-
-  - sockfd：监听套接字
-  - addr：保存客户端地址的结构体
-  - addrlen：结构体长度
-- 返回值：成功返回已连接套接字，失败返回-1
 
 ## 8. close()
 
@@ -696,9 +675,9 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
 
 # I/O复用
 
-## 1. select
-
 IO复用，只用一个进程或线程，来实现多路并发。其本质上是内核监听文件描述符的读写缓冲区，是否可读或可写。
+
+## 1. select
 
 **优点：**
 
@@ -709,8 +688,6 @@ IO复用，只用一个进程或线程，来实现多路并发。其本质上是
 - 有最大1024个文件描述符的限制（可以修改宏FD_SETSIZE，但需要重新编译内核，比较麻烦）
 - 每次重新监听，需要重新添加文件描述符（将需要监听的文件描述符集合，从用户态拷贝到内核态）
 - 如果同时有大量连接，但只有少部分文件描述符活跃，由于需要遍历文件描述符是否在集合内，所以会导致效率很低
-
-
 
 ```c
 /* According to POSIX.1-2001, POSIX.1-2008 */
@@ -813,15 +790,15 @@ typedef union epoll_data {
     uint64_t     u64;
 } epoll_data_t;
 
-struct epoll_event {
-	uint32_t     events;      /* Epoll events */
-    epoll_data_t data;        /* User data variable */
-};
-
 events：
     - EPOLLIN：文件描述符是否可读
 	- EPOLLOUT：文件描述符是否可写
     - 其他
+
+struct epoll_event {
+	uint32_t     events;      /* Epoll events */
+    epoll_data_t data;        /* User data variable */
+};
 ```
 
 - 功能：注册需要监听的文件描述符和对应的事件
@@ -867,13 +844,9 @@ epoll_wait有两种触发方式，一个是水平触发，一个是边沿触发�
 - 水平触发：只要写缓冲区没有满，就会一直触发。这种触发方式不好
 - 边沿触发：只要写缓冲区的数据发送一次，就会触发一次
 
-
-
-读缓冲区设置为水平触发和边沿触发都可以，但设置为边沿触发，可以减少内核态向用户态的切换，可以提高效率，只要保证数据可以读完就可以。但写缓冲区如果设置为水平触发，就会一直触发，这样不好，所以要设置为边沿触发。
+读缓冲区设置为水平触发和边沿触发都可以，但设置为边沿触发，可以减少内核态向用户态的切换，可以提高效率，只要保证数据可以读完就可以。但写缓冲区如果设置为水平触发，就会一直触发，这样不是很好
 
 **所以，如果只监听读事件，可以使用默认的水平触发；如果除了监听读事件，还要监听写事件，要设置为边沿触发**
-
-
 
 ```c
 tEpollEvent.events = EPOLLIN | EPOLLET; // EPOLLET表示设置为边沿触发
@@ -897,8 +870,6 @@ fcntl(fd, F_SETFL, flag);
 
 
 <img src="https://note.youdao.com/yws/public/resource/a66685a4842f56c1ad2c2aaf50a39424/xmlnote/249DDF72D9FC453DAA586DCA1F50FF66/26916" style="zoom:80%;" />
-
-## 4. 三种IO复用方式的比较
 
 # IP协议
 
